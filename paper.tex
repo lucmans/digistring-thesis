@@ -1,0 +1,81 @@
+
+\documentclass[10pt,twocolumn]{article}
+
+% \frenchspacing
+% \setlength\parindent{0pt}
+
+\usepackage[english]{babel}
+\usepackage[stretch=10, shrink=10]{microtype}
+\usepackage[a4paper, total={6.5in, 9in}]{geometry}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage[linesnumbered,lined,commentsnumbered]{algorithm2e}
+
+% Better vspace in enumerate/itemize
+\usepackage{enumitem}
+\setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
+
+% \setlength{\columnsep}{8mm}
+
+\title{}
+\author{Luc de Jonckheere}
+% \date{}
+
+\begin{document}
+\selectlanguage{english}
+
+\maketitle
+%\tableofcontents
+
+
+\section*{Abstract}
+Short summary.
+
+
+\section{Introduction}
+Intro the scope (AMT, guitar$\rightarrow$digital, real-time).
+
+The goal of the paper (real-time monophonic AMT, research effectiveness of commonly used methods) and our focus (using Fourier and other signal processing algorithms). Note about building upon research project.
+
+Application (hexaphonic guitar pick-up to MIDI).
+
+Note about other research (no usable code, no data sets).
+
+
+\section{Related work}
+Other papers. Sample citations~\cite{mono}~\cite{window}~\cite{twotimes}.
+
+
+\section{Preliminaries}
+Jargon required to understand this paper.
+
+
+\section{Paper content}
+Actual research etc.
+
+
+\section{Experiments}  \label{sec:exp}
+Test the system.
+
+
+\section{Conclusions}
+What we did in this paper. Reflection on the performance of the system. Final reference to the source code/dataset location.
+
+
+\section{Future work}  \label{sec:future}
+What could still be improved/further researched.
+
+
+
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{plain}
+\bibliography{paper}
+
+\end{document}
+ 
