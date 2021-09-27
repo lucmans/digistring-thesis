@@ -23,7 +23,7 @@
 
 % \setlength{\columnsep}{8mm}
 
-\title{\textbf{Real-time monophonic guitar transcription}}
+\title{\textbf{Real-time monophonic guitar pitch estimation}\\The feasibility of Fourier transform based methods}
 \author{Luc de Jonckheere}
 % \date{}
 
@@ -35,41 +35,52 @@
 
 
 \section*{Abstract}
-Short summary.
+\textcolor{gray}{Short summary.}
 
 
 \section{Introduction}
-Intro the scope (AMT, guitar$\rightarrow$digital, real-time).
+% TODO: Talk about monophonic?
+Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine what note is played in a given signal.
 
-The goal of the paper (real-time monophonic AMT, research effectiveness of commonly used methods) and our focus (using Fourier and other signal processing algorithms). Note about building upon research project.
+In this thesis, we will focus on real-time pitch estimation, meaning we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is irrelevant. This limits the different methods we can use.
 
-Application (hexaphonic guitar pick-up to MIDI).
+% Many transcription systems use Fourier transform based methods.
 
-Note about other research (no usable code, no data sets).
+This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable
+
+\textcolor{gray}{The goal of the paper is to research the limits of Fourier transform based pitch estimation methods and assess if the problem is solvable (real-time monophonic AMT, research effectiveness of commonly used methods) and our focus (using Fourier and other signal processing algorithms). Note about building upon research project.}
+
+\textcolor{gray}{Application (hexaphonic guitar pick-up to MIDI).}\\
+If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
+
+\textcolor{gray}{Note about other research (no usable code, no data sets).}
 
 
 \section{Related work}
-Other papers. Sample citations~\cite{mono}~\cite{window}~\cite{twotimes}.
+\textcolor{gray}{Other papers. Sample citations~\cite{mono}~\cite{window}~\cite{twotimes}.}
 
 
 \section{Preliminaries}
-Jargon required to understand this paper.
+\textcolor{gray}{Jargon required to understand this paper.}
+
+\subsection{Fourier transform}
+\textcolor{gray}{Emphesis on descrete (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation}
 
 
 \section{Paper content}
-Actual research etc.
+\textcolor{gray}{Actual research etc.}
 
 
 \section{Experiments}  \label{sec:exp}
-Test the system.
+\textcolor{gray}{Test the system.}
 
 
 \section{Conclusions}
-What we did in this paper. Reflection on the performance of the system. Final reference to the source code/dataset location.
+\textcolor{gray}{What we did in this paper. Reflection on the performance of the system. Final reference to the source code/dataset location.}
 
 
 \section{Future work}  \label{sec:future}
-What could still be improved/further researched.
+\textcolor{gray}{What could still be improved/further researched.}
 
 
 
