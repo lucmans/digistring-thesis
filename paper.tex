@@ -21,6 +21,8 @@
 \usepackage{enumitem}
 \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
 
+\newcommand{\note}[2]{#1${}_#2$}
+
 % \setlength{\columnsep}{8mm}
 
 \title{\textbf{Real-time monophonic guitar pitch estimation}\\The feasibility of Fourier transform based methods}
@@ -42,13 +44,12 @@
 % TODO: Talk about monophonic?
 Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine what note is played in a given signal.
 
-In this thesis, we will focus on real-time pitch estimation, meaning we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is irrelevant. This limits the different methods we can use.
+Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is irrelevant. This limits the methods we can use to solve this problem.
 
-% Many transcription systems use Fourier transform based methods.
+This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
-This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable
-
-\textcolor{gray}{The goal of the paper is to research the limits of Fourier transform based pitch estimation methods and assess if the problem is solvable (real-time monophonic AMT, research effectiveness of commonly used methods) and our focus (using Fourier and other signal processing algorithms). Note about building upon research project.}
+\textcolor{gray}{The goal of the paper is to research the limits of Fourier transform based pitch estimation methods and assess if the problem is solvable (real-time monophonic AMT, research effectiveness of commonly used methods) and our focus (using Fourier and other signal processing algorithms). Note about building upon research project.}\\
+The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation and assess if the problem is solvable.
 
 \textcolor{gray}{Application (hexaphonic guitar pick-up to MIDI).}\\
 If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
@@ -63,8 +64,23 @@ If pitch estimation can accurately be performed in real-time, it can be used to 
 \section{Preliminaries}
 \textcolor{gray}{Jargon required to understand this paper.}
 
+\subsection{Real-time}
+\textcolor{gray}{What we mean with real-time vs how other work uses real-time. Formal vs common definition.}
+
 \subsection{Fourier transform}
-\textcolor{gray}{Emphesis on descrete (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation}
+\textcolor{gray}{Emphasis on discrete FFT (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation.}
+
+\subsection{Software representation of samples and FFT}
+\textcolor{gray}{The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
+
+\subsection{Software amplification}
+\textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
+
+\subsection{Fundamental and overtones}
+\textcolor{gray}{Overtone theory.}
+
+\subsection{Music notation/theory}
+\textcolor{gray}{Scientific note notation, 12-TET, \note{A}{4}.}
 
 
 \section{Paper content}
