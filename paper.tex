@@ -22,7 +22,9 @@
 \usepackage{enumitem}
 \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
 
-\newcommand{\note}[2]{#1${}_#2$}
+\newcommand{\note}[2]{#1${}_{#2}$}
+\newcommand{\notesharp}[2]{#1${}_{#2}^{\sharp}$}
+\newcommand{\noteflat}[2]{#1${}_{#2}^{\flat}$}
 
 % \setlength{\columnsep}{8mm}
 
@@ -51,7 +53,7 @@ If pitch estimation can accurately be performed in real-time, it can be used to 
 
 % The Fourier transform is often used to decompose a signal into the frequencies that make up the signal. Predominant frequencies in the signal show up as spectral peaks in the frequency domain. These peaks are important to human perception~\cite{hearing}.
 
-We will focus on monophonic pitch estimation. Here, we assume that the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument.
+Our research focusses on monophonic pitch estimation. Here, we assume that the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument.
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
@@ -75,7 +77,13 @@ The goal of this thesis is to research the limits of Fourier transform based rea
 \textcolor{gray}{Lorum Ipsum.}
 
 \subsection{Music notation/theory}
-\textcolor{gray}{Scientific note notation, 12-TET, \note{A}{4}.}
+In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. Moreover, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch.
+
+Using scientific pitch notation, every note can be uniquely identified by combining the traditional note names \note{A}{} to \note{G}{} (with accidentals such as $\sharp$ and $\flat$) with an octave number (e.g. \noteflat{E}{3}). An octave starts at \note{C}{}, which means the octave number increases between \note{B}{} and \note{C}{}. This counter intuitively implies that \note{A}{3} is higher than \note{C}{3}. Note that in 12-TET, \notesharp{C}{4} and \noteflat{D}{4} are enharmonically equivalent. %Furthermore, even though technically \notesharp{B}{3} (which is equal to \note{C}{4}) is within the fourth octave, it is denoted to be in the third octave as accidentals do not change the octave number.
+
+The 12-TET music system only describes the relation between two notes in an interval. In order to play with other musicians in harmony, an arbitrary note has to be tuned to a specific frequency. Per ISO 16, the standard tuning frequency of the \note{A}{4} is 440 Hz within an accuracy of 0.5 Hz~\cite{isoa}.
+
+The range of a guitar in standard tuning is from \note{E}{2} to \note{E}{6}... TODO
 
 
 \section{Paper content}
