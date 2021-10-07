@@ -44,16 +44,16 @@
 
 
 \section{Introduction}
-% TODO: Talk about monophonic?
 Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine what note is played in a given signal.
 
 Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is irrelevant. This limits the methods we can use to solve this problem.
 
 If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
 
-% The Fourier transform is often used to decompose a signal into the frequencies that make up the signal. Predominant frequencies in the signal show up as spectral peaks in the frequency domain. These peaks are important to human perception~\cite{hearing}.
+The Fourier transform is often used to decompose a signal into the frequencies that make up the signal. Predominant frequencies in the signal show up as spectral peaks in the frequency domain. These peaks are important to human perception of melody~\cite{hearing}. %The popularity of the Fourier transform in pitch estimation is likely due to its widespread use in
+\textcolor{gray}{TODO: Mention other methods of solving this problem.}
 
-Our research focusses on monophonic pitch estimation. Here, we assume that the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument.
+Our research focusses on monophonic pitch estimation. Here, we assume that the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. Commercial guitar synthesizer solutions from companies with big research departments such as Roland also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive polyphonic pitch estimation of a guitar.
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
@@ -73,21 +73,26 @@ The goal of this thesis is to research the limits of Fourier transform based rea
 \subsection{Fourier transform}
 \textcolor{gray}{Emphasis on discrete FFT (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation.}
 
-\subsection{Fundamental, overtones and transients}
-\textcolor{gray}{Lorum Ipsum.}
-
 \subsection{Music notation/theory}
 In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. Moreover, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch.
 
 Using scientific pitch notation, every note can be uniquely identified by combining the traditional note names \note{A}{} to \note{G}{} (with accidentals such as $\sharp$ and $\flat$) with an octave number (e.g. \noteflat{E}{3}). An octave starts at \note{C}{}, which means the octave number increases between \note{B}{} and \note{C}{}. This counter intuitively implies that \note{A}{3} is higher than \note{C}{3}. Note that in 12-TET, \notesharp{C}{4} and \noteflat{D}{4} are enharmonically equivalent. %Furthermore, even though technically \notesharp{B}{3} (which is equal to \note{C}{4}) is within the fourth octave, it is denoted to be in the third octave as accidentals do not change the octave number.
+The range of a typical guitar in standard tuning is from \note{E}{2} up to \note{E}{6}.
 
 The 12-TET music system only describes the relation between two notes in an interval. In order to play with other musicians in harmony, an arbitrary note has to be tuned to a specific frequency. Per ISO 16, the standard tuning frequency of the \note{A}{4} is 440 Hz within an accuracy of 0.5 Hz~\cite{isoa}.
 
-The range of a guitar in standard tuning is from \note{E}{2} to \note{E}{6}... TODO
+\subsection{Transients and envelope}
+\textcolor{gray}{When you pluck a string, first signal behaves very chaotically. ADSR envelope.}
+
+\subsection{Fundamental frequency, overtones and timbre}
+When playing a note on an instrument, many sine waves are generated. The most notable frequency is called the fundamental frequency and determines what note is actually played. Integer multiples of the fundamental frequency can resonate and give rise to harmonic overtones~\cite{overtones}. In practice, these overtones are not exact integer multiples due to non-linear effect.%, however, they are of lower order and can be discarded.
+\textcolor{gray}{TODO?: Overtone dissonance.}
+
+Furthermore, many other frequencies are generated along with the fundamental and its overtones. The instrument specific pattern of these frequencies, along with its envelope, is called the timbre of the instrument~\cite{timbre}. Generally, the amplitude of the timbre frequencies is low compared to the fundamental frequency and shows up as noise in the frequency domain.
 
 
 \section{Paper content}
-\textcolor{gray}{Actual research etc.}
+\textcolor{gray}{Actual research etc. Summary what was done in the research project that we build on. Notes on future work of research project.}
 
 \subsection{Software amplification}
 \textcolor{gray}{(Software representation of samples and FFT). The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
@@ -99,15 +104,20 @@ The range of a guitar in standard tuning is from \note{E}{2} to \note{E}{6}... T
 
 
 \section{Experiments}  \label{sec:exp}
-\textcolor{gray}{Test the system.}
+\textcolor{gray}{Note that the parameters were empirically optimized with informal experiments. Datasets. Actual experiments.}
 
 
 \section{Conclusions}
-\textcolor{gray}{What we did in this paper. Reflection on the performance of the system. Final reference to the source code/dataset location.}
+\textcolor{gray}{What we did in this paper. Reflection on the performance of the system. Final reference to the source code.}
 
 
 \section{Future work}  \label{sec:future}
 \textcolor{gray}{What could still be improved/further researched.}
+
+
+
+\appendix
+\section{Measuring the latency of the Axon}
 
 
 
