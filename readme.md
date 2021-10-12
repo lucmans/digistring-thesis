@@ -1,1 +1,1 @@
-The paper (`paper.pdf`) for which digistring was developed.
+The thesis (`thesis.pdf`) for which digistring was developed.

@@ -1,9 +1,9 @@
 
 all:
-	pdflatex paper.tex
-	bibtex paper
-	pdflatex paper.tex
-	pdflatex paper.tex
+	pdflatex thesis.tex
+	bibtex thesis
+	pdflatex thesis.tex
+	pdflatex thesis.tex
 
 clean:
-	rm -rf paper.aux paper.bbl paper.blg paper.log paper.out
+	rm -rf thesis.aux thesis.bbl thesis.blg thesis.log thesis.out
