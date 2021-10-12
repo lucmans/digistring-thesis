@@ -20,7 +20,7 @@
 
 % Better vspace in enumerate/itemize
 \usepackage{enumitem}
-\setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
+% \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
 
 \newcommand{\note}[2]{#1${}_{#2}$}
 \newcommand{\notesharp}[2]{#1${}_{#2}^{\sharp}$}
@@ -67,8 +67,20 @@ The goal of this thesis is to research the limits of Fourier transform based rea
 \section{Preliminaries}
 \textcolor{gray}{Jargon required to understand this paper.}
 
+\subsection{Audio processing}
+\textcolor{gray}{Audio is represented by samples. We get these samples from the OS audio driver. Driver latency.}
+
 \subsection{Real-time}
-\textcolor{gray}{What we mean with real-time vs how other work uses real-time. Formal vs common definition.}
+\textcolor{gray}{What we mean with real-time vs how other work uses real-time. Formal vs common definition.}\\
+Real-time is a difficult concept, as it has many definitions. Here are a few examples of relevant definitions:
+\begin{enumerate}
+    \item Being synced with actual clock time (or wall time). This is relevant when playing media such as audio and video. When such media is played at an incorrect speed, it could be considered distorted. The hardware which keeps track of the clock time is called a real-time clock.
+    \item A system must response within a specified time constraint, which is called the real-time constraint or deadline. This constraint is usually a relatively short time. This definition comes from real-time computing and is relevant when making car airbags or airplane control systems. Failing to response within the real-time constraint leads to failures of the system. Note that system that have to respond seemingly instantaneous, such as graphical user interfaces or instant chatting/calling, are not real-time. There are no hard deadlines which the system has to respond within and the system does not fail if some delay does occur. Only user experience is slightly impacted.
+    \item \textcolor{red}{A system that can process data faster than it acquires data.} This is technically not real-time, however, it is often used as such in academic literature. It is important for real-time system to process data faster than it acquires it so it does not start to lag behind, however, this is an implicit deadline. Not having this deadline explicit may lead to non-sensible expectations of the system.
+\end{enumerate}
+Even though the first definition is very relevant when working with audio, it is not relevant for us. The audio drivers of operating systems handle all timing for us. We simply have to wait for samples to be recorded and made available to our program. Moreover, when playing back audio, we only have to keep the sampling rate in mind. The operating system handles the correct timing of the samples to our audio hardware.
+
+TODO: What we mean by real-time.
 
 \subsection{Fourier transform}
 \textcolor{gray}{Emphasis on discrete FFT (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation.}
@@ -125,7 +137,7 @@ Furthermore, many other frequencies are generated along with the fundamental and
 
 
 \appendix
-\section{Measuring the latency of the Axon}
+\section{Measuring the latency of the AXON AX 100 mkII}
 \textcolor{gray}{Lekker meten en weten.}
 
 
