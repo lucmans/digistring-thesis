@@ -74,13 +74,16 @@ The goal of this thesis is to research the limits of Fourier transform based rea
 \textcolor{gray}{What we mean with real-time vs how other work uses real-time. Formal vs common definition.}\\
 Real-time is a difficult concept, as it has many definitions. Here are a few examples of relevant definitions:
 \begin{enumerate}
-    \item Being synced with actual clock time (or wall time). This is relevant when playing media such as audio and video. When such media is played at an incorrect speed, it could be considered distorted. The hardware which keeps track of the clock time is called a real-time clock.
-    \item A system must response within a specified time constraint, which is called the real-time constraint or deadline. This constraint is usually a relatively short time. This definition comes from real-time computing and is relevant when making car airbags or airplane control systems. Failing to response within the real-time constraint leads to failures of the system. Note that system that have to respond seemingly instantaneous, such as graphical user interfaces or instant chatting/calling, are not real-time. There are no hard deadlines which the system has to respond within and the system does not fail if some delay does occur. Only user experience is slightly impacted.
+    \item Being synced with actual clock time (or wall time). This is for instance relevant when playing media such as audio and video. When such media is played at an incorrect speed, it could be considered distorted. The hardware which keeps track of the clock time is called a real-time clock.
+    \item A system must response within a specified time constraint, which is called the real-time constraint or deadline. This constraint is usually a relatively short time. This definition comes from real-time computing and is relevant when making car airbags or airplane control systems. Failing to response within the real-time constraint leads to failures of the system. Real-time systems are often classified into hard, firm and soft real-time based on the impact of missing the deadline~\cite{realclass}. Note that system that have to respond seemingly instantaneous, such as graphical user interfaces or instant chatting/calling, are not real-time. There are no hard deadlines which the system has to respond within and the system does not fail if some delay does occur. Only user experience is slightly impacted.
     \item \textcolor{red}{A system that can process data faster than it acquires data.} This is technically not real-time, however, it is often used as such in academic literature. It is important for real-time system to process data faster than it acquires it so it does not start to lag behind, however, this is an implicit deadline. Not having this deadline explicit may lead to non-sensible expectations of the system.
 \end{enumerate}
 Even though the first definition is very relevant when working with audio, it is not relevant for us. The audio drivers of operating systems handle all timing for us. We simply have to wait for samples to be recorded and made available to our program. Moreover, when playing back audio, we only have to keep the sampling rate in mind. The operating system handles the correct timing of the samples to our audio hardware.
 
-TODO: What we mean by real-time.
+% TODO: What we mean by real-time.
+In order to allow guitarists to use their guitar as a MIDI instrument, our system has to respond within a small time frame. On top of that, if the system fails to respond quickly enough, the usefulness of the result degrades, as timing is very important when playing an instrument. These restrictions would classify our system as a soft real-time system. We choose a real-time of constraint of TODO milliseconds. We elaborate on this choice in section~\ref{sec:constraint}.
+
+Other work in real-time pitch estimation... TODO
 
 \subsection{Fourier transform}
 \textcolor{gray}{Emphasis on discrete FFT (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation.}
@@ -108,11 +111,14 @@ As mentioned before, when strumming a note, a percussive sound is generated. Thi
 When playing a note on an instrument, many sine waves are generated. The most notable frequency is called the fundamental frequency and determines what note is actually played. Integer multiples of the fundamental frequency can resonate and give rise to harmonic overtones~\cite{overtones}. In practice, these overtones are not exact integer multiples due to non-linear effect.%, however, they are of lower order and can be discarded.
 \textcolor{gray}{TODO?: Overtone dissonance.}
 
-Furthermore, many other frequencies are generated along with the fundamental and its overtones. The instrument specific pattern of these frequencies, along with its envelope, is called the timbre of the instrument~\cite{timbre}. Generally, the amplitude of the timbre frequencies is low compared to the fundamental frequency and shows up as noise in the frequency domain.
+Furthermore, many other frequencies are generated along with the fundamental and its overtones. The instrument specific pattern of these frequencies, along with its envelope, is called the timbre of the instrument~\cite{timbre}. The timbre is what separates the sound of the same note played on two different instruments~\cite{perception}. Generally, the amplitude of the timbre frequencies is low compared to the fundamental frequency and can be disregarded as noise in the frequency domain.
 
 
 \section{Thesis content}
 \textcolor{gray}{Actual research etc. Summary what was done in the research project that we build on. Notes on future work of research project.}
+
+\subsection{Real-time constraint}  \label{sec:constraint}
+\textcolor{gray}{Start with the factors coming into play when choosing the real-time constraint for our system (latency, played notes per second etc). Note on measured latency in Appendix~\ref{sec:ax100}. Empirically found bounds on latency using our latency program}
 
 \subsection{Software amplification}
 \textcolor{gray}{(Software representation of samples and FFT). The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
@@ -137,7 +143,7 @@ Furthermore, many other frequencies are generated along with the fundamental and
 
 
 \appendix
-\section{Measuring the latency of the AXON AX 100 mkII}
+\section{Measuring the latency of the AXON AX 100 mkII}  \label{sec:ax100}
 \textcolor{gray}{Lekker meten en weten.}
 
 
