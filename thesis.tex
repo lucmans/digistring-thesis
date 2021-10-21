@@ -7,6 +7,7 @@
 
 \usepackage[english]{babel}
 \usepackage[stretch=10, shrink=10]{microtype}
+% \usepackage[a4paper]{geometry}
 \usepackage[a4paper, total={6.5in, 9in}]{geometry}
 \usepackage{graphicx}
 \usepackage{caption}
@@ -60,7 +61,7 @@ Our research focusses on monophonic pitch estimation. Here, we assume that the s
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
-The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}
+The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.
 
 
 \section{Related work}
@@ -74,10 +75,9 @@ The goal of this thesis is to research the limits of Fourier transform based rea
 \textcolor{gray}{Audio is represented by samples. We get these samples from the OS audio driver. Driver latency.}
 
 \subsection{Fourier transform}
-% \textcolor{gray}{Emphasis on discrete FFT (where most papers only mention continuous, which causes misconceptions). Effect of sampling rate (which is often chosen too low) and frame size. Sensitivity for specific frequencies. Quadratic interpolation.}
 The Fourier transform is a mathematical transform which transforms a function of time to a complex valued function of frequency and phase. Here, the magnitude represents the amplitude and the argument represents the phase of the corresponding sine wave. The Fourier transform works on continuous functions and assumes an infinite time interval. Concepts such as continuous and infinite cannot be represented by a computer. Consequently, the discrete Fourier transform (DFT) has to be used for Fourier analyses on computers. It can by efficiently implemented used the fast Fourier transform (FFT) algorithm.
 
-The DFT transform a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. When working with audio, the samples are real valued, and the DFT output is symmetrical. Because of this, we can discard the second half of the output. In the rest of this thesis, we will only consider the first half of the output. Each bin corresponds to a specific frequency. All other frequencies are spread out over other bis, which will be discussed later. Given a frame $F$, the number of samples is the frame is $n_F = |F|$. Using $n_F$ and sample rate $f_{\text{SR}}$, we can calculate the distance between bins:
+The DFT transforms a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. When working with audio, the samples are real valued, and the DFT output is symmetrical. Because of this, we can discard the second half of the output. In the rest of this thesis, we will only consider the first half of the output. Each bin corresponds to a specific frequency. All other frequencies are spread out over multiple bins due to spectral leakage, which will be discussed later. Given a frame $F$, the number of samples is the frame is $n_F = |F|$. Using $n_F$ and sample rate $f_{\text{SR}}$, we can calculate the distance between bins:
 \[ \Delta f_{bin} = \frac{f_{\text{SR}}}{n_F} \]
 This is also referred to as the frequency resolution. Closely related to the frequency resolution is the frame length, which is calculated as follows:
 \[ t_F = \frac{n_F}{f_{\text{SR}}} \]
@@ -85,15 +85,45 @@ Given a bin number $i \in [0, \floor{\frac{n_F}{2}}]$, the frequency of a bin ca
 \[ f_{bin} = \Delta f_{bin} * i \]
 The 0 Hz bin corresponds to the so called DC offset. This is the average amplitude of the signal. The frequency of the last bin is also called the Nyquist frequency, which is the highest frequency which can be sampled without aliasing. The Nyquist frequency is equal to half the sample rate.
 
-The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. For instance, say we are performing the DFT on a sine wave. If our frame contains 3.33 periods, it will appear as seen in Figure~\ref{fig:framealias} to our DFT. Because of this, some other frequencies also fit the wave in the frame, which is called spectral leakage. Spectral leakage can be controlled used window functions.
+The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. For instance, say we are performing the DFT on a sine wave. If our frame contains TODO periods, it will appear as seen in Figure~\ref{fig:framealias} to our DFT and some other frequencies will also fit the wave in the frame. This effect is called spectral leakage and causes frequencies which are not a multiple of $\Delta f_{bin}$ to spread out over multiple bins.
 \begin{figure}[H]
     \centering
-    % \includegraphics[width=\linewidth]{fig/envelope.png}
+    \includegraphics[width=\linewidth]{fig/aliasing.png}
     \caption{Aliasing that occurs when performing the discrete Fourier transform}
     \label{fig:framealias}
 \end{figure}
+Spectral leakage can be controlled using window functions. Given signal $s(n)$ and window function $w(n)$, we get the resulting signal $\text{res}(n)$ using:
+\[ \text{res}(n) = s(n) * w(n) \]
+Figure~\ref{fig:windowfunc} shows the working of a window function on a frame graphically.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{fig/window.png}
+    \caption{An example of using a window function on a signal}
+    \label{fig:windowfunc}
+\end{figure}
+The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\linewidth]{fig/envelope.png}
+    \caption{Examples of the spectral leakage of some window functions}
+    \label{fig:windowfunceffect}
+\end{figure}
 
-% The other frequencies in the input get spread out over all bins, depending on the window function used.
+Zero-padding can be used to increase the number of output bins of the DFT. It is important to note that it does not increase the resolution of the DFT, it merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together will still fall in the same bin~\cite{zeropad2}. This form of interpolation is relatively compute intensive~\cite{interpolnozero}.
+
+A less compute intensive method of interpolation is quadratic interpolation. It interpolates the actual location of a spectral peak between bins by fitting a quadratic function through the bins on a decibel scale~\cite{interpol}. We calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin. Using the magnitude of the peak $y(0)$ and the magnitude of the neighbouring bins $y(-1)$ and $y(1)$, we define:
+\begin{align*}
+    \alpha &= 20 * {}^{10}\!\log{y(-1)} \\
+    \beta  &= 20 * {}^{10}\!\log{y(0)} \\
+    \gamma &= 20 * {}^{10}\!\log{y(1)}
+\end{align*}
+Then, we can calculate $p$ as follows:
+\[ p = \frac{1}{2} \cdot \frac{\alpha - \gamma}{\alpha - 2\beta + \gamma} \]
+The amplitude $a_i$ corresponding to the interpolated peak is:
+\[ a_i = \beta - \frac{(\alpha - \gamma) * p}{4} \]
+Given the bin number $b$ of the spectral peak location, the frequency $f_i$ corresponding to the interpolated peak is:
+\[ f_i = \Delta f_{bin} * (b + p) \]
+Quadratic interpolation can be combined with zero-padding for better results~\cite{interpolnozero}.
 
 \subsection{Real-time}
 Real-time is a difficult concept, as it has many definitions. Here are a few examples of relevant definitions:
@@ -109,7 +139,7 @@ In order to allow guitarists to use their guitar as a MIDI instrument, our syste
 Other work in real-time pitch estimation often uses the third definition of real-time. This is a problem when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This is well over our real-time constraint and would be unplayable for any musician. Other papers which do explicitly set a real-time constraint, choose very high constraints between 120 ms up to 250 ms. We have found no papers which choose a sensible real-time constraint.
 
 \subsection{Music theory and notation}
-In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. Moreover, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch.
+In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. As a result, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch.
 
 Using scientific pitch notation, every note can be uniquely identified by combining the traditional note names \note{A}{} to \note{G}{} (with accidentals such as $\sharp$ and $\flat$) with an octave number (e.g. \noteflat{E}{3}). An octave starts at \note{C}{}, which means the octave number increases between \note{B}{} and \note{C}{}. This counter intuitively implies that \note{A}{3} is higher than \note{C}{3}. Note that in 12-TET, \notesharp{C}{} and \noteflat{D}{} are enharmonically equivalent. %Furthermore, even though technically \notesharp{B}{3} (which is equal to \note{C}{4}) is within the fourth octave, it is denoted to be in the third octave as accidentals do not change the octave number.
 The range of a typical guitar in standard tuning is from \note{E}{2} up to \note{E}{6}.
