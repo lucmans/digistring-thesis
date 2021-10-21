@@ -65,7 +65,12 @@ The goal of this thesis is to research the limits of Fourier transform based rea
 
 
 \section{Related work}
-\textcolor{gray}{Other papers. Sample citations~\cite{mono}~\cite{window}~\cite{twotimes}.}
+Much research has been performed on Fourier transform based real-time pitch estimation. Fourier based methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}. This is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi}\cite{sloomboi2}, however, this inhibits the use for real-world applications. Furthermore, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
+
+A big problem with Fourier based pitch estimation is the occurrence of overtones~\cite{oud}. Especially octaves are a problem, as the fundamental and all overtones of the higher note overlap with overtones of the lower note. This is referred to as the octave problem~
+\cite{octave}. Overtones are periodic in nature, as they diminishingly repeat every multiple of the fundamental frequency. As a consequence, they could also be detected using a subsequent Fourier transform~\cite{doublefourier} on the frequency domain. However, this does not solve the octave problem.
+
+Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behaviour is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the limitations of the Fourier transform are mainly due to the low frequency resolution and since the CQT is often implemented using Fourier transforms~\cite{cqtfft}, we are still left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:dissonance}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel.
 
 
 \section{Preliminaries}
@@ -136,15 +141,50 @@ Even though the first definition is very relevant when working with audio, it is
 
 In order to allow guitarists to use their guitar as a MIDI instrument, our system has to respond within a small time frame. On top of that, if the system fails to respond quickly enough, the usefulness of the result degrades, as timing is very important when playing an instrument. These restrictions would classify our system as a soft real-time system. We choose a real-time of constraint of TODO milliseconds. We elaborate on this choice in section~\ref{sec:constraint}.
 
-Other work in real-time pitch estimation often uses the third definition of real-time. This is a problem when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This is well over our real-time constraint and would be unplayable for any musician. Other papers which do explicitly set a real-time constraint, choose very high constraints between 120 ms up to 250 ms. We have found no papers which choose a sensible real-time constraint.
+Other work in real-time pitch estimation often uses the third definition of real-time. This is a problem when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This is well over our real-time constraint and would be unplayable for any musician. Other papers which do explicitly set a real-time constraint, choose very high constraints between 140~\cite{sloomboi} ms up to 360~\cite{sloomboi2} ms. We have found no papers which choose a sensible real-time constraint.
 
 \subsection{Music theory and notation}
-In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. As a result, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch.
+In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. As a result, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch. A semitone further be divided into 100 logarithmically scales cents. Cents are often used to measure dissonance.
 
-Using scientific pitch notation, every note can be uniquely identified by combining the traditional note names \note{A}{} to \note{G}{} (with accidentals such as $\sharp$ and $\flat$) with an octave number (e.g. \noteflat{E}{3}). An octave starts at \note{C}{}, which means the octave number increases between \note{B}{} and \note{C}{}. This counter intuitively implies that \note{A}{3} is higher than \note{C}{3}. Note that in 12-TET, \notesharp{C}{} and \noteflat{D}{} are enharmonically equivalent. %Furthermore, even though technically \notesharp{B}{3} (which is equal to \note{C}{4}) is within the fourth octave, it is denoted to be in the third octave as accidentals do not change the octave number.
+Using scientific pitch notation, every note can be uniquely identified by combining the traditional note names \note{A}{} to \note{G}{} (with accidentals such as $\sharp$ and $\flat$) with an octave number (e.g. \noteflat{E}{3}). An octave starts at \note{C}{}, which means the octave number increases between \note{B}{} and \note{C}{}. This counter intuitively implies that \note{A}{3} is higher than \note{C}{3}. Note that in 12-TET, \notesharp{C}{} and \noteflat{D}{} are enharmonically equivalent. In this thesis, we will always refer to the sharp ($\sharp$) note instead of the enharmonically equivalent flat note ($\flat$). %Furthermore, even though technically \notesharp{B}{3} (which is equal to \note{C}{4}) is within the fourth octave, it is denoted to be in the third octave as accidentals do not change the octave number.
 The range of a typical guitar in standard tuning is from \note{E}{2} up to \note{E}{6}.
 
 The 12-TET music system only describes the relation between two notes in an interval. In order to play with other musicians in harmony, an arbitrary note has to be tuned to a specific frequency. Per ISO 16, the standard tuning frequency of the \note{A}{4} is 440 Hz within an accuracy of 0.5 Hz~\cite{isoa}.
+
+Using the above information, we can translate frequencies into scientific note names and vice versa. In order to numerically work with note names, we assign a value to each note as shown in Table~\ref{tab:notenames}.
+\begin{table}[H]
+    \hfill
+    \begin{center}
+        \begin{tabular}{l|l}
+            name & number \\
+            \hline
+            \note{A}{}      & 0 \\
+            \notesharp{A}{} & 1 \\
+            \note{B}{}      & 2 \\
+            \note{C}{}      & 3 \\
+            \notesharp{C}{} & 4 \\
+            \note{D}{}      & 5
+        \end{tabular}
+        \qquad
+        \begin{tabular}{l|l}
+            name & number \\
+            \hline
+            \notesharp{D}{} & 6 \\
+            \note{E}{}      & 7 \\
+            \note{F}{}      & 8 \\
+            \notesharp{F}{} & 9 \\
+            \note{G}{}      & 10 \\
+            \notesharp{G}{} & 11
+        \end{tabular}
+    \end{center}
+    \hfill
+    \caption{The number corresponding to each note name}
+    \label{tab:notenames}
+\end{table}
+In order to make calculations easier, we use \note{C}{0} as a tuning note instead of \note{A}{4}. We can calculate the frequency of \note{C}{0} using the fact that \note{C}{0} is 57 semitones lower than \note{A}{4}:
+\[ f_{C_0} = 440 * 2^{\frac{-57}{12}} = 16.352 \text{ Hz} \]
+% \[ 440 * \sqrt[12]{2}^{-57} = 16.352 Hz \]
+TODO: Frequency to note and error etc.
 
 \subsection{Envelope and transients}
 The perceived loudness of a note over time can be described using an ADSR envelope. The ADSR envelope of a played note is the convex hull of the waveform of the signal, see Figure~\ref{fig:adsr} for an example. This convex hull can be divided in four parts: Attack, Decay, Sustain, Release. When a note is strummed on the guitar, a percussive sound is generated which causes a loud and sharp attack along with the note. This percussive sound quickly decays and only the actually fretted note will sustain. Finally, when the note is released, it dies out quickly.
@@ -158,10 +198,28 @@ The perceived loudness of a note over time can be described using an ADSR envelo
 As mentioned before, when strumming a note, a percussive sound is generated. This sound is called a transient and contains a high degree of non-periodic components. Transients appear very chaotically in the frequency domain and thus is often considered as noise. Since a transient is of high amplitude, it overshadows the note that will eventually sustain. Because of this, we cannot use the samples from a transient for pitch estimation. This in turn increases our minimum latency, as we have to wait for samples which do not contain the transient any more.
 
 \subsection{Fundamental frequency, overtones and timbre}
-When playing a note on an instrument, many sine waves are generated. The most notable frequency is called the fundamental frequency and determines what note is actually played. Integer multiples of the fundamental frequency can resonate and give rise to harmonic overtones~\cite{overtones}. In practice, these overtones are not exact integer multiples due to non-linear effect.%, however, they are of lower order and can be discarded.
-\textcolor{gray}{TODO?: Overtone dissonance.}
+When playing a note on an instrument, many sine waves are generated. The most notable frequency is called the fundamental frequency and determines what note is actually played. Integer multiples of the fundamental frequency can resonate and give rise to harmonic overtones~\cite{overtones}. In practice, these overtones are not exact integer multiples due to non-linear effect.
 
 Furthermore, many other frequencies are generated along with the fundamental and its overtones. The instrument specific pattern of these frequencies, along with its envelope, is called the timbre of the instrument~\cite{timbre}. The timbre is what separates the sound of the same note played on two different instruments~\cite{perception}. Generally, the amplitude of the timbre frequencies is low compared to the fundamental frequency and can be disregarded as noise in the frequency domain.
+
+\subsection{Overtone dissonance}  \label{sec:dissonance}
+\textcolor{gray}{TODO: Overtone dissonance. This is why CQT doesn't work well.}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{rrcrr}
+        $n$ & $f_{\text{overtone}}$ & closest note & $f_\text{note}$ & error \\
+        \hline
+        0 & 261.626  & $C_4$    & 261.626  &  - \\
+        1 & 523.251  & $C_5$    & 523.251  &  0 \\
+        2 & 784.877  & $G_5$    & 783.991  &  1.955 \\
+        3 & 1046.502 & $C_6$    & 1046.502 &  0 \\
+        4 & 1308.128 & $E_6$    & 1318.510 &  -13.686 \\
+        5 & 1569.753 & $G_6$    & 1567.982 &  1.955 \\
+        6 & 1831.379 & $A^\#_6$ & 1864.655 &  -31.174
+    \end{tabular}
+    \caption{Example of overtone series from \note{C}{4} and the errors compared to the closest note}
+    \label{tab:overseries}
+\end{table}
 
 
 \section{Thesis content}
