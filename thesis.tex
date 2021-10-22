@@ -1,15 +1,12 @@
 
 % \documentclass[10pt]{article}
 \documentclass[10pt,twocolumn]{article}
-
-% \frenchspacing
-% \setlength\parindent{0pt}
+\setlength\columnsep{6mm}
 
 \usepackage[english]{babel}
 \usepackage[stretch=10, shrink=10]{microtype}
 % \usepackage[a4paper]{geometry}
 \usepackage[a4paper, total={6.5in, 9in}]{geometry}
-\usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{amsmath}
@@ -18,10 +15,19 @@
 \usepackage{hyperref}
 \usepackage{float}
 \usepackage[linesnumbered,lined,commentsnumbered]{algorithm2e}
-
-% Better vspace in enumerate/itemize
 \usepackage{enumitem}
+\ifdefined\noimage  % For omitting images during build from CLI
+    \usepackage[demo]{graphicx}
+\else
+    \usepackage{graphicx}
+\fi
+
+% Tighter vspace in enumerate/itemize
 % \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
+
+\hypersetup{  % Prevents colored boxes around \cite and \ref
+    allbordercolors = {white}
+}
 
 \newcommand{\note}[2]{#1${}_{#2}$}
 \newcommand{\notesharp}[2]{#1${}_{#2}^{\sharp}$}
@@ -29,8 +35,8 @@
 
 \newcommand{\floor}[1]{\left \lfloor #1 \right \rfloor}
 \newcommand{\ceil}[1]{\left \lceil #1 \right \rceil}
+\newcommand{\round}[1]{\left \lfloor #1 \right \rceil}
 
-% \setlength{\columnsep}{8mm}
 
 \title{\textbf{Real-time monophonic guitar pitch estimation}\\The feasibility of Fourier transform based methods}
 \author{Luc de Jonckheere}
@@ -40,11 +46,13 @@
 \selectlanguage{english}
 
 \maketitle
-%\tableofcontents
 
 
 \section*{Abstract}
 \textcolor{gray}{Short summary.}
+
+
+\tableofcontents
 
 
 \section{Introduction}
@@ -64,13 +72,13 @@ This thesis builds upon a preliminary research project~\cite{ik}. In our researc
 The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.
 
 
-\section{Related work}
-Much research has been performed on Fourier transform based real-time pitch estimation. Fourier based methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}. This is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi}\cite{sloomboi2}, however, this inhibits the use for real-world applications. Furthermore, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
+\section{Related work}  \label{sec:related}
+Much research has been performed on Fourier transform based real-time pitch estimation. Fourier based methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}. This is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi, sloomboi2}, however, this inhibits the use for real-world applications. Furthermore, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
 
 A big problem with Fourier based pitch estimation is the occurrence of overtones~\cite{oud}. Especially octaves are a problem, as the fundamental and all overtones of the higher note overlap with overtones of the lower note. This is referred to as the octave problem~
 \cite{octave}. Overtones are periodic in nature, as they diminishingly repeat every multiple of the fundamental frequency. As a consequence, they could also be detected using a subsequent Fourier transform~\cite{doublefourier} on the frequency domain. However, this does not solve the octave problem.
 
-Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behaviour is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the limitations of the Fourier transform are mainly due to the low frequency resolution and since the CQT is often implemented using Fourier transforms~\cite{cqtfft}, we are still left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:dissonance}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel.
+Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behaviour is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the limitations of the Fourier transform are mainly due to the low frequency resolution and since the CQT is often implemented using Fourier transforms~\cite{cqtfft}, we are still left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:overtones}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is important when performing polyphonic transcription.
 
 
 \section{Preliminaries}
@@ -90,13 +98,14 @@ Given a bin number $i \in [0, \floor{\frac{n_F}{2}}]$, the frequency of a bin ca
 \[ f_{bin} = \Delta f_{bin} * i \]
 The 0 Hz bin corresponds to the so called DC offset. This is the average amplitude of the signal. The frequency of the last bin is also called the Nyquist frequency, which is the highest frequency which can be sampled without aliasing. The Nyquist frequency is equal to half the sample rate.
 
-The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. For instance, say we are performing the DFT on a sine wave. If our frame contains TODO periods, it will appear as seen in Figure~\ref{fig:framealias} to our DFT and some other frequencies will also fit the wave in the frame. This effect is called spectral leakage and causes frequencies which are not a multiple of $\Delta f_{bin}$ to spread out over multiple bins.
+The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may lead to aliasing if the beginning and end of a frame do not align, see Figure~\ref{fig:framealias}. Here, we take a frame shown by the red lines. The frame is not aligned to a period of the sine wave and causes aliasing as seen in the second graph. This kind of aliasing is called spectral leakage and causes other frequencies which are not a multiple of $\Delta f_{bin}$ to spread out over multiple bins. By applying a window function, the beginning and end of a frame are forced to align.
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{fig/aliasing.png}
+    \includegraphics[width=\linewidth]{fig/leakage.png}
     \caption{Aliasing that occurs when performing the discrete Fourier transform}
     \label{fig:framealias}
 \end{figure}
+
 Spectral leakage can be controlled using window functions. Given signal $s(n)$ and window function $w(n)$, we get the resulting signal $\text{res}(n)$ using:
 \[ \text{res}(n) = s(n) * w(n) \]
 Figure~\ref{fig:windowfunc} shows the working of a window function on a frame graphically.
@@ -106,6 +115,7 @@ Figure~\ref{fig:windowfunc} shows the working of a window function on a frame gr
     \caption{An example of using a window function on a signal}
     \label{fig:windowfunc}
 \end{figure}
+
 The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
 \begin{figure}[H]
     \centering
@@ -116,7 +126,7 @@ The different windows functions trade of between a narrow center lobe and little
 
 Zero-padding can be used to increase the number of output bins of the DFT. It is important to note that it does not increase the resolution of the DFT, it merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together will still fall in the same bin~\cite{zeropad2}. This form of interpolation is relatively compute intensive~\cite{interpolnozero}.
 
-A less compute intensive method of interpolation is quadratic interpolation. It interpolates the actual location of a spectral peak between bins by fitting a quadratic function through the bins on a decibel scale~\cite{interpol}. We calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin. Using the magnitude of the peak $y(0)$ and the magnitude of the neighbouring bins $y(-1)$ and $y(1)$, we define:
+A less compute intensive method of interpolation is quadratic interpolation. It interpolates the actual location of a spectral peak between bins by fitting a quadratic function through the bins on a decibel scale~\cite{dbpolate, interpol}. We calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin. Using the magnitude of the peak $y(0)$ and the magnitude of the neighbouring bins $y(-1)$ and $y(1)$, we define:
 \begin{align*}
     \alpha &= 20 * {}^{10}\!\log{y(-1)} \\
     \beta  &= 20 * {}^{10}\!\log{y(0)} \\
@@ -141,7 +151,7 @@ Even though the first definition is very relevant when working with audio, it is
 
 In order to allow guitarists to use their guitar as a MIDI instrument, our system has to respond within a small time frame. On top of that, if the system fails to respond quickly enough, the usefulness of the result degrades, as timing is very important when playing an instrument. These restrictions would classify our system as a soft real-time system. We choose a real-time of constraint of TODO milliseconds. We elaborate on this choice in section~\ref{sec:constraint}.
 
-Other work in real-time pitch estimation often uses the third definition of real-time. This is a problem when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This is well over our real-time constraint and would be unplayable for any musician. Other papers which do explicitly set a real-time constraint, choose very high constraints between 140~\cite{sloomboi} ms up to 360~\cite{sloomboi2} ms. We have found no papers which choose a sensible real-time constraint.
+Other work in real-time pitch estimation often uses the third definition of real-time. This is a problem when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This is well over our real-time constraint and would be unplayable for any musician. Other papers which do explicitly set a real-time constraint, choose very high constraints from 140 ms~\cite{sloomboi} up to 360 ms~\cite{sloomboi2}. We have found no papers which choose a sensible real-time constraint.
 
 \subsection{Music theory and notation}
 In modern western music, we use the twelve-tone equal temperament (12-TET) music system. This system divides an octave, which is the interval between a pitch and another pitch with double the frequency, into twelve equally spaced semitones on the logarithmic scale. The logarithmic scale is used such that the perceived interval between two adjacent notes is constant~\cite{perception}. As a result, the ratio between two frequencies in an $n$-semitone interval is $\sqrt[12]{2}^n$ or $2^{\frac{n}{12}}$, invariant to pitch. A semitone further be divided into 100 logarithmically scales cents. Cents are often used to measure dissonance.
@@ -158,23 +168,23 @@ Using the above information, we can translate frequencies into scientific note n
         \begin{tabular}{l|l}
             name & number \\
             \hline
-            \note{A}{}      & 0 \\
-            \notesharp{A}{} & 1 \\
-            \note{B}{}      & 2 \\
-            \note{C}{}      & 3 \\
-            \notesharp{C}{} & 4 \\
-            \note{D}{}      & 5
+            \note{C}{}      & 0 \\
+            \notesharp{C}{} & 1 \\
+            \note{D}{}      & 2 \\
+            \notesharp{D}{} & 3 \\
+            \note{E}{}      & 4 \\
+            \note{F}{}      & 5
         \end{tabular}
         \qquad
         \begin{tabular}{l|l}
             name & number \\
             \hline
-            \notesharp{D}{} & 6 \\
-            \note{E}{}      & 7 \\
-            \note{F}{}      & 8 \\
-            \notesharp{F}{} & 9 \\
-            \note{G}{}      & 10 \\
-            \notesharp{G}{} & 11
+            \notesharp{F}{} & 6 \\
+            \note{G}{}      & 7 \\
+            \notesharp{G}{} & 8 \\
+            \note{A}{}      & 9 \\
+            \notesharp{A}{} & 10 \\
+            \note{B}{}      & 11
         \end{tabular}
     \end{center}
     \hfill
@@ -182,9 +192,35 @@ Using the above information, we can translate frequencies into scientific note n
     \label{tab:notenames}
 \end{table}
 In order to make calculations easier, we use \note{C}{0} as a tuning note instead of \note{A}{4}. We can calculate the frequency of \note{C}{0} using the fact that \note{C}{0} is 57 semitones lower than \note{A}{4}:
-\[ f_{C_0} = 440 * 2^{\frac{-57}{12}} = 16.352 \text{ Hz} \]
+\begin{align*}
+    f_{C_0} = f_{A_4} * 2^{\frac{-57}{12}} &= 440 * 2^{\frac{-57}{12}} \\
+                                           &= 16.352 \text{ Hz}
+\end{align*}
+% \[ f_{C_0} = 440 * 2^{\frac{-57}{12}} = 16.352 \text{ Hz} \]
 % \[ 440 * \sqrt[12]{2}^{-57} = 16.352 Hz \]
-TODO: Frequency to note and error etc.
+
+We assume that $a \mod b$ always return a number $c$ for which $0 \leq c < b$. Some programming languages allow the modulo operator to return a value $c$ for which $-b < c < b$, resulting in $-13 \mod 10 = -3$ instead of $-13 \mod 10 = 7$.
+
+We can calculate the frequency $f_{N_O}$, where $N$ is the note name which is represented by a numerical value given by Table~\ref{tab:notenames} and $O$ is the octave number using:
+\begin{align*}
+    f_{N_O} &= f_{C_0} * 2^O * 2^{\frac{N}{12}} \\
+            &= f_{C_0} * 2^{O + \frac{N}{12}}
+\end{align*}
+% \[ f_{N_O} = f_{C_0} * 2^O * 2^{\frac{N}{12}} \]
+To calculate the closest note $N_O$ corresponding to a frequency $f$, we first calculate the number of semitones $n_s$ between the tuning note $f_{C_0}$ and $f$:
+\begin{align*}
+    n_s = \round{12 * {}^{2}\!\log{\frac{f}{f_{C_0}}}}
+\end{align*}
+Here, $\round{\ldots}$ denotes rounding to the nearest integer. Rounding this number causes us to find the closest note to $f$. Now we can calculate $N$ and $O$ as follows:
+\begin{align*}
+    N &= n_s \mod 12 \\
+    O &= \floor{\frac{n_s}{12}}
+    % O &= n_s / 12
+\end{align*}
+In order to calculate the error $e$ in cents of the given frequency to the closest tuned note, we first calculate the tuned frequency $f_t$ of the closest note:
+\[ f_t = f_{C_0} * 2^{\frac{n_s}{12}} \]
+Then the error $e$ can be calculated using:
+\[ e = 1200 * {}^{2}\!\log{\frac{f}{f_t}} \]
 
 \subsection{Envelope and transients}
 The perceived loudness of a note over time can be described using an ADSR envelope. The ADSR envelope of a played note is the convex hull of the waveform of the signal, see Figure~\ref{fig:adsr} for an example. This convex hull can be divided in four parts: Attack, Decay, Sustain, Release. When a note is strummed on the guitar, a percussive sound is generated which causes a loud and sharp attack along with the note. This percussive sound quickly decays and only the actually fretted note will sustain. Finally, when the note is released, it dies out quickly.
@@ -197,13 +233,12 @@ The perceived loudness of a note over time can be described using an ADSR envelo
 
 As mentioned before, when strumming a note, a percussive sound is generated. This sound is called a transient and contains a high degree of non-periodic components. Transients appear very chaotically in the frequency domain and thus is often considered as noise. Since a transient is of high amplitude, it overshadows the note that will eventually sustain. Because of this, we cannot use the samples from a transient for pitch estimation. This in turn increases our minimum latency, as we have to wait for samples which do not contain the transient any more.
 
-\subsection{Fundamental frequency, overtones and timbre}
+\subsection{Fundamental frequency, overtones and timbre}  \label{sec:overtones}
 When playing a note on an instrument, many sine waves are generated. The most notable frequency is called the fundamental frequency and determines what note is actually played. Integer multiples of the fundamental frequency can resonate and give rise to harmonic overtones~\cite{overtones}. In practice, these overtones are not exact integer multiples due to non-linear effect.
 
 Furthermore, many other frequencies are generated along with the fundamental and its overtones. The instrument specific pattern of these frequencies, along with its envelope, is called the timbre of the instrument~\cite{timbre}. The timbre is what separates the sound of the same note played on two different instruments~\cite{perception}. Generally, the amplitude of the timbre frequencies is low compared to the fundamental frequency and can be disregarded as noise in the frequency domain.
 
-\subsection{Overtone dissonance}  \label{sec:dissonance}
-\textcolor{gray}{TODO: Overtone dissonance. This is why CQT doesn't work well.}
+In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect to notes in 12-TET. This is true for all overtones, except for octaves, which are all overtones numbers equal to $2^n - 1$ for every $n$. In Table~\ref{tab:overseries}, we show an example for the overtones of \note{C}{4}. Note that the series of errors is the same, regardless of what the starting note is.
 \begin{table}[H]
     \centering
     \begin{tabular}{rrcrr}
@@ -219,6 +254,57 @@ Furthermore, many other frequencies are generated along with the fundamental and
     \end{tabular}
     \caption{Example of overtone series from \note{C}{4} and the errors compared to the closest note}
     \label{tab:overseries}
+\end{table}
+TODO: Overtone overlap and polyphonic difficulty.
+\begin{table}[H]
+    \centering
+    \hfill
+    \begin{tabular}{r|l}
+        $n$ & $f^{C_3}_0*n$ \\
+        \hline
+        1 & 130.813 \\
+        2 & 261.626 \\
+        \textcolor{red}{3} & \textcolor{red}{392.438} \\
+        4 & 523.251 \\
+        \textcolor{blue}{5} & \textcolor{blue}{654.064}
+    \end{tabular}
+    \hfill
+    \begin{tabular}{r|l}
+        $n$ & $f^{E_3}_0*n$ \\
+        \hline
+        1 & 164.814 \\
+        2 & 329.628 \\
+        3 & 494.441 \\
+        \textcolor{blue}{4} & \textcolor{blue}{659.255} \\
+        5 & 824.069
+    \end{tabular}
+    \hfill
+    \begin{tabular}{r|l}
+        $n$ & $f^{G_3}_0*n$ \\
+        \hline
+        1 & 195.998 \\
+        \textcolor{red}{2} & \textcolor{red}{391.995} \\
+        3 & 587.993 \\
+        4 & 783.991 \\
+        5 & 979.989
+    \end{tabular}
+    \hfill
+    \caption{Overtones of C, E and G}
+    \label{tab:overtones}
+\end{table}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{c|c|c}
+        Note & $f$ & $\Delta f$ \\
+        \hline
+        $f^{C_3}_2$ & 392.438 & \multirow{2}{*}{0.443} \\
+        $f^{G_3}_1$ & 391.995 & \\
+        \hline
+        $f^{C_3}_4$ & 654.064 & \multirow{2}{*}{5.191} \\
+        $f^{E_3}_3$ & 659.255 &
+    \end{tabular}
+    \caption{Colliding overtones}
+    \label{tab:diff}
 \end{table}
 
 
@@ -258,8 +344,9 @@ Furthermore, many other frequencies are generated along with the fundamental and
 \textcolor{gray}{Plots met effect van verschillende window functions.}
 
 
-\addcontentsline{toc}{chapter}{Bibliography}
+\addcontentsline{toc}{section}{Bibliography}
 \bibliographystyle{plain}
+% \bibliographystyle{alpha}
 \bibliography{thesis}
 
 \end{document}

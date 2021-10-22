@@ -8,5 +8,9 @@ all:
 1:
 	pdflatex thesis.tex
 
+noimage:
+	pdflatex "\\def\\noimage{}\\input{thesis.tex}"
+
+
 clean:
-	rm -rf thesis.aux thesis.bbl thesis.blg thesis.log thesis.out
+	rm -rf thesis.aux thesis.bbl thesis.blg thesis.log thesis.out thesis.toc
