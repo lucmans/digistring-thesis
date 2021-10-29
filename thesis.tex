@@ -58,7 +58,7 @@
 \section{Introduction}
 Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine what note is played in a given signal.
 
-Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is irrelevant. This limits the methods we can use to solve this problem.
+Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
 
 If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
 
@@ -67,18 +67,19 @@ Other popular methods used for pitch estimation include non-negative matrix fact
 
 Our research focusses on monophonic pitch estimation. Here, we assume that the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. Commercial guitar synthesizer solutions from companies with big research departments such as Roland also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive polyphonic pitch estimation of a guitar.
 
-This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
+This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
-The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.
+\textcolor{gray}{TODO: Rewrite this paragraph.} The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.
 
 
 \section{Related work}  \label{sec:related}
-Much research has been performed on Fourier transform based real-time pitch estimation. Fourier based methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}. This is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi, sloomboi2}, however, this inhibits the use for real-world applications. Furthermore, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
+Much research has been performed on Fourier transform based real-time pitch estimation. All research we found relies on obtaining a high resolution frequency domain in which spectral peaks can be isolated and notes can be associated with. These methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}.%, however, in our research project we found that it might still be possible. The lack of resolution in the low frequencies is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used.
+This is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi, sloomboi2}, however, this inhibits the use for real-world applications. Furthermore, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
 
 A big problem with Fourier based pitch estimation is the occurrence of overtones~\cite{oud}. Especially octaves are a problem, as the fundamental and all overtones of the higher note overlap with overtones of the lower note. This is referred to as the octave problem~
 \cite{octave}. Overtones are periodic in nature, as they diminishingly repeat every multiple of the fundamental frequency. As a consequence, they could also be detected using a subsequent Fourier transform~\cite{doublefourier} on the frequency domain. However, this does not solve the octave problem.
 
-Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behaviour is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the limitations of the Fourier transform are mainly due to the low frequency resolution and since the CQT is often implemented using Fourier transforms~\cite{cqtfft}, we are still left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:overtones}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is important when performing polyphonic transcription.
+Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behaviour is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the CQT transform is efficiently implemented using Fourier transforms~\cite{cqtfft} and the main problem with Fourier is the fundamentally low frequency resolution on short frames, so we are left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:overtones}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is especially important when performing polyphonic transcription.
 
 
 \section{Preliminaries}
@@ -88,9 +89,9 @@ Many different transform have been researched for pitch estimation, however, Fou
 \textcolor{gray}{Audio is represented by samples. We get these samples from the OS audio driver. Driver latency.}
 
 \subsection{Fourier transform}
-The Fourier transform is a mathematical transform which transforms a function of time to a complex valued function of frequency and phase. Here, the magnitude represents the amplitude and the argument represents the phase of the corresponding sine wave. The Fourier transform works on continuous functions and assumes an infinite time interval. Concepts such as continuous and infinite cannot be represented by a computer. Consequently, the discrete Fourier transform (DFT) has to be used for Fourier analyses on computers. It can by efficiently implemented used the fast Fourier transform (FFT) algorithm.
+The Fourier transform is a mathematical transform which transforms a function of time to a complex valued function of frequency and phase. Here, the magnitude represents the amplitude and the argument represents the phase of the corresponding sine wave. The Fourier transform works on continuous functions and assumes an infinite time interval. Concepts such as continuous and infinite cannot be represented by a computer. Consequently, the discrete Fourier transform (DFT) has to be used for Fourier analyses on computers. The DFT can efficiently be calculated using the fast Fourier transform (FFT) algorithm.
 
-The DFT transforms a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. When working with audio, the samples are real valued, and the DFT output is symmetrical. Because of this, we can discard the second half of the output. In the rest of this thesis, we will only consider the first half of the output. Each bin corresponds to a specific frequency. All other frequencies are spread out over multiple bins due to spectral leakage, which will be discussed later. Given a frame $F$, the number of samples is the frame is $n_F = |F|$. Using $n_F$ and sample rate $f_{\text{SR}}$, we can calculate the distance between bins:
+The DFT transforms a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. When working with audio, the samples are real valued, and the DFT output is symmetrical. Because of this, we can discard the second half of the output. In the rest of this thesis, we will only consider the first half of the output. Each bin corresponds to a specific frequency. All other frequencies are spread out over multiple bins due to spectral leakage, which will be discussed later. Given a frame $F$, the number of samples is the frame is $n_F = |F|$. Using $n_F$ and sample rate $f_{\text{SR}}$, we can calculate the distance between bins in Hz:
 \[ \Delta f_{bin} = \frac{f_{\text{SR}}}{n_F} \]
 This is also referred to as the frequency resolution. Closely related to the frequency resolution is the frame length, which is calculated as follows:
 \[ t_F = \frac{n_F}{f_{\text{SR}}} \]
@@ -115,11 +116,14 @@ Figure~\ref{fig:windowfunc} shows the working of a window function on a frame gr
     \caption{An example of using a window function on a signal}
     \label{fig:windowfunc}
 \end{figure}
-
-The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
+\noindent The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
 \begin{figure}[H]
     \centering
-    % \includegraphics[width=\linewidth]{fig/envelope.png}
+    \includegraphics[width=\linewidth]{fig/windows.png}
+    % \includegraphics[width=\linewidth]{fig/window_rect.png}
+    % \includegraphics[width=\linewidth]{fig/window_hann.png}
+    % \includegraphics[width=\linewidth]{fig/window_welch.png}
+    % \includegraphics[width=\linewidth]{fig/window_dolph.png}
     \caption{Examples of the spectral leakage of some window functions}
     \label{fig:windowfunceffect}
 \end{figure}
@@ -145,10 +149,11 @@ Real-time is a difficult concept, as it has many definitions. Here are a few exa
 \begin{enumerate}
     \item Being synced with actual clock time (or wall time). This is for instance relevant when playing media such as audio and video. When such media is played at an incorrect speed, it could be considered distorted. The hardware which keeps track of the clock time is called a real-time clock.
     \item A system must response within a specified time constraint, which is called the real-time constraint or deadline. This constraint is usually a relatively short time. This definition comes from real-time computing and is relevant when making car airbags or airplane control systems. Failing to response within the real-time constraint leads to failures of the system. Real-time systems are often classified into hard, firm and soft real-time based on the impact of missing the deadline~\cite{realclass}. Note that system that have to respond seemingly instantaneous, such as graphical user interfaces or instant chatting/calling, are not real-time. There are no hard deadlines which the system has to respond within and the system does not fail if some delay does occur. Only user experience is slightly impacted.
-    \item \textcolor{red}{A system that can process data faster than it acquires data.} This is technically not real-time, however, it is often used as such in academic literature. It is important for real-time system to process data faster than it acquires it so it does not start to lag behind, however, this is an implicit deadline. Not having this deadline explicit may lead to non-sensible expectations of the system.
+    \item \textcolor{red}{A system that can process data faster than it acquires data.} This is technically not real-time, however, it is often used as such in academic literature. It is important for real-time system to process data faster than it acquires data so it does not lag behind after some time, however, this is an implicit deadline. Not having this deadline explicit may lead to non-sensible expectations of the system.
 \end{enumerate}
-Even though the first definition is very relevant when working with audio, it is not relevant for us. The audio drivers of operating systems handle all timing for us. We simply have to wait for samples to be recorded and made available to our program. We only have to keep the sampling rate in mind when working directly with the samples.
+Even though the first definition is very relevant when working with audio, it is not relevant for us. The audio drivers of operating systems handle all timing for us. We simply have to wait for samples to be recorded and made available to our program. We only have to keep the sampling rate in mind as shown in the previous section.
 
+% TODO: Maybe it's a firm real-time system. And usefulness degrades more if latency was higher.
 In order to allow guitarists to use their guitar as a MIDI instrument, our system has to respond within a small time frame. On top of that, if the system fails to respond quickly enough, the usefulness of the result degrades, as timing is very important when playing an instrument. These restrictions would classify our system as a soft real-time system. We choose a real-time of constraint of TODO milliseconds. We elaborate on this choice in section~\ref{sec:constraint}.
 
 Other work in real-time pitch estimation often uses the third definition of real-time. This is a problem when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This is well over our real-time constraint and would be unplayable for any musician. Other papers which do explicitly set a real-time constraint, choose very high constraints from 140 ms~\cite{sloomboi} up to 360 ms~\cite{sloomboi2}. We have found no papers which choose a sensible real-time constraint.
@@ -207,6 +212,7 @@ We can calculate the frequency $f_{N_O}$, where $N$ is the note name which is re
             &= f_{C_0} * 2^{O + \frac{N}{12}}
 \end{align*}
 % \[ f_{N_O} = f_{C_0} * 2^O * 2^{\frac{N}{12}} \]
+
 To calculate the closest note $N_O$ corresponding to a frequency $f$, we first calculate the number of semitones $n_s$ between the tuning note $f_{C_0}$ and $f$:
 \begin{align*}
     n_s = \round{12 * {}^{2}\!\log{\frac{f}{f_{C_0}}}}
@@ -255,6 +261,9 @@ In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect 
     \caption{Example of overtone series from \note{C}{4} and the errors compared to the closest note}
     \label{tab:overseries}
 \end{table}
+TODO: When using the CQT transform, none of the non-octave overtones coincides with a CQT bin, as the CQT bins are exponentially spaced like the notes in a scale. This causes the frequencies of the overtones to spread out over all other bins, resulting in more noise in the frequency domain. Furthermore, as shown in our research project, overtones are important for discerning fundamentals from noise generated by transients. By using a Fourier transform tuned to a specific note, all its overtones are also coincide with Fourier bins. By performing a Fourier tuned to every note in the 12 tone scale, we can accurately measure every note and its overtones. This gives us more accurate and information
+
+TODO: The main problem in polyphonic pitch estimation comes from the occurrence of overtones. As mentioned before, notes in octave tend overshadow each other. Furthermore, as shown in Table~\ref{tab:overtones}, the overtones of a note can coincide with the...
 TODO: Overtone overlap and polyphonic difficulty.
 \begin{table}[H]
     \centering
@@ -311,6 +320,8 @@ TODO: Overtone overlap and polyphonic difficulty.
 \section{Thesis content}
 \textcolor{gray}{Actual research etc. Summary what was done in the research project that we build on. Notes on future work of research project.}
 
+\textcolor{gray}{As mentioned in Section~\ref{sec:related} and shown in our research project, the resolution in the frequency domain is not sufficient for spectral peak selecting methods. Given the info in preliminaries, we can tune Fouriers to specific frequencies.}
+
 \subsection{Real-time constraint}  \label{sec:constraint}
 \textcolor{gray}{Start with the factors coming into play when choosing the real-time constraint for our system (latency, played notes per second etc). Note on measured latency in Appendix~\ref{sec:ax100}. Empirically found bounds on latency using our latency program}
 
@@ -318,9 +329,12 @@ TODO: Overtone overlap and polyphonic difficulty.
 \textcolor{gray}{(Software representation of samples and FFT). The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
 \textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
 
+\subsection{Parallel Fourier transforms}
+
 
 \section{Implementation}
 \textcolor{gray}{Details about the program I've written. Usage instructions, code choices, code structure, screenshots, expandability}
+
 
 
 \section{Experiments}  \label{sec:exp}
