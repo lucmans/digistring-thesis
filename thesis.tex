@@ -222,6 +222,7 @@ Here, $\round{\ldots}$ denotes rounding to the nearest integer. By rounding, we 
     % O &= n_s / 12
 \end{align*}
 Note that we assume $a \mod b$ always return a number $c$ for which $0 \leq c < b$. Some programming languages allow the modulo operator to return a value $c$ for which $-b < c < b$, resulting in $-13 \mod 10 = -3$ instead of $-13 \mod 10 = 7$. Furthermore, when using a conversion to an integer instead of a floor, the octave number is rounded up when the note distance is negative.
+
 In order to calculate the error $e$ in cents of the given frequency to the closest tuned note, we first calculate the tuned frequency $f_t$ of the closest note:
 \[ f_t = f_{C_0} * 2^{\frac{n_s}{12}} \]
 Then the error $e$ can be calculated using:
