@@ -58,7 +58,7 @@
 \section{Introduction}
 Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine what note is played in a given signal.
 
-Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
+Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal (TODO: peek-ahead). In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
 
 If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
 
@@ -81,6 +81,8 @@ A big problem with Fourier based pitch estimation is the occurrence of overtones
 
 Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behaviour is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the CQT transform is efficiently implemented using Fourier transforms~\cite{cqtfft} and the main problem with Fourier is the fundamentally low frequency resolution on short frames, so we are left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:overtones}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is especially important when performing polyphonic transcription.
 
+\textcolor{red}{Vergelijk materiaal}
+
 
 \section{Preliminaries}
 \textcolor{gray}{Jargon required to understand this paper.}
@@ -97,7 +99,7 @@ This is also referred to as the frequency resolution. Closely related to the fre
 \[ t_F = \frac{n_F}{f_{\text{SR}}} \]
 Given a bin number $i \in [0, \floor{\frac{n_F}{2}}]$, the frequency of a bin can be calculated as:
 \[ f_{bin} = \Delta f_{bin} * i \]
-The 0 Hz bin corresponds to the so called DC offset. This is the average amplitude of the signal. The frequency of the last bin is also called the Nyquist frequency, which is the highest frequency which can be sampled without aliasing. The Nyquist frequency is equal to half the sample rate.
+The 0 Hz bin corresponds to the so called DC offset. This is the average amplitude of the signal. The frequency of the last bin is also called the Nyquist frequency and is equal to half the sample rate. The Nyquist frequency is important for two reasons~\cite{numrec}. The first relates to the sampling theorem, which states that if a continuous function is sampled at a rate of $f_{\text{SR}}$ and only contains frequencies $f$ for which $f \leq \frac{f_{\text{SR}}}{2}$, the samples will completely determine the original function. In other words, the samples perfectly describe the original waveform. Secondly, frequencies $f$ for which $f > \frac{f_{\text{SR}}}{2}$ are spuriously moved into $[0, \frac{f_{\text{SR}}}{2}]$, which causes aliasing.
 
 The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may lead to aliasing if the beginning and end of a frame do not align, see Figure~\ref{fig:framealias}. Here, we take a frame shown by the red lines. The frame is not aligned to a period of the sine wave and causes aliasing as seen in the second graph. This kind of aliasing is called spectral leakage and causes other frequencies which are not a multiple of $\Delta f_{bin}$ to spread out over multiple bins. By applying a window function, the beginning and end of a frame are forced to align.
 \begin{figure}[H]
@@ -329,7 +331,8 @@ TODO: Overtone overlap and polyphonic difficulty.
 \textcolor{gray}{(Software representation of samples and FFT). The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
 \textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
 
-\subsection{Parallel Fourier transforms}
+\subsection{Parallel tuned Fourier transforms}
+12 Fouriers for each note and it's overtones.
 
 
 \section{Implementation}
