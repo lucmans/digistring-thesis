@@ -65,7 +65,7 @@ If pitch estimation can accurately be performed in real-time, it can be used to 
 The Fourier transform is often used to decompose a signal into the frequencies that make up the signal. Predominant frequencies in the signal show up as spectral peaks in the frequency domain. These peaks are important to human perception of melody~\cite{hearing}. %The popularity of the Fourier transform in pitch estimation is likely due to its widespread use in
 Other popular methods used for pitch estimation include non-negative matrix factorization, autocorrelation, statistical model based estimation and hidden Markov model based estimation.
 
-Our research focusses on monophonic pitch estimation. Here, we assume the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. Commercial guitar synthesizer solutions from companies with big research departments such as Roland also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive polyphonic pitch estimation of a guitar.
+Our research focuses on monophonic pitch estimation. Here, we assume the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. Commercial guitar synthesizer solutions from companies with big research departments such as Roland also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive polyphonic pitch estimation of a guitar.
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
@@ -118,7 +118,8 @@ Figure~\ref{fig:windowfunc} shows the working of a window function on a frame gr
     \caption{An example of using a window function on a signal}
     \label{fig:windowfunc}
 \end{figure}
-\noindent The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
+% https://stackoverflow.com/questions/18161870/ola-fft-windows-blackman-nuttall-or-dolph-chebyshev
+\noindent \textcolor{red}{Spectral leakage falls into three categories: Scalloping loss, Main lobe width (of a sine wave) and Sidelobes max level/decrease.} The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{fig/windows.png}
@@ -201,7 +202,7 @@ Using the above information, we can translate frequencies into scientific note n
 In order to make calculations easier, we use \note{C}{0} as a tuning note instead of \note{A}{4}. We can calculate the frequency of \note{C}{0} using the fact that \note{C}{0} is 57 semitones lower than \note{A}{4}:
 \begin{align*}
     f_{C_0} = f_{A_4} * 2^{\frac{-57}{12}} &= 440 * 2^{\frac{-57}{12}} \\
-                                           &= 16.352 \text{ Hz}
+                                           &\approx 16.352 \text{ Hz}
 \end{align*}
 % \[ f_{C_0} = 440 * 2^{\frac{-57}{12}} = 16.352 \text{ Hz} \]
 % \[ 440 * \sqrt[12]{2}^{-57} = 16.352 Hz \]
@@ -217,6 +218,10 @@ To calculate the closest note $N_O$ corresponding to a frequency $f$, we first c
 \begin{align*}
     n_s = \round{12 * {}^{2}\!\log{\frac{f}{f_{C_0}}}}
 \end{align*}
+% Or more generally given a tuning note $N_O$:
+% \begin{align*}
+%     n_s^{N_O}(f) = \round{12 * {}^{2}\!\log{\frac{f}{f_{N_O}}}}
+% \end{align*}
 Here, $\round{\ldots}$ denotes rounding to the nearest integer. By rounding, we find the closest note to $f$. Now we can calculate $N$ and $O$ as follows:
 \begin{align*}
     N &= n_s \mod 12 \\
@@ -225,10 +230,19 @@ Here, $\round{\ldots}$ denotes rounding to the nearest integer. By rounding, we 
 \end{align*}
 Note that we assume $a \mod b$ always return a number $c$ for which $0 \leq c < b$. Some programming languages allow the modulo operator to return a value $c$ for which $-b < c < b$, resulting in $-13 \mod 10 = -3$ instead of $-13 \mod 10 = 7$. Furthermore, when using a conversion to an integer instead of a floor, the octave number is rounded up when the note distance is negative.
 
-In order to calculate the error $e$ in cents of the given frequency to the closest tuned note, we first calculate the tuned frequency $f_t$ of the closest note:
+In order to calculate the error $e$ (in cents) between the given frequency to the closest tuned note, we first calculate the tuned frequency $f_t$ of the closest note:
 \[ f_t = f_{C_0} * 2^{\frac{n_s}{12}} \]
 Then the error $e$ can be calculated using:
 \[ e = 1200 * {}^{2}\!\log{\frac{f}{f_t}} \]
+
+\textcolor{red}{MIDI note number calculations.}
+In digital music processing, notes are often represented through MIDI note numbers. A MIDI note number can take a value from $0$ to $127$. The MIDI standard defines \note{C}{4} to be MIDI note number $60$. This makes the standard tuning frequency \note{A}{4} number $69$ and \note{C}{0} number $12$.
+
+To calculate the MIDI note number $m$ corresponding to the closest note to frequency $f$, we can use the number of semitones from \note{C}{0} $n_s$ and the fact that \note{C}{0} has note number $12$:
+% \[ m = n_s + 12 \]
+\begin{align*}
+    m = n_s^{C_0} + 12
+\end{align*}
 
 \subsection{Envelope and transients}
 The perceived loudness of a note over time can be described using an ADSR envelope. The ADSR envelope of a played note is the convex hull of the waveform of the signal, see Figure~\ref{fig:adsr} for an example. This convex hull can be divided in four parts: Attack, Decay, Sustain, Release. When a note is strummed on the guitar, a percussive sound is generated which causes a loud and sharp attack along with the note. This percussive sound quickly decays and only the actually fretted note will sustain. Finally, when the note is released, it dies out quickly.
