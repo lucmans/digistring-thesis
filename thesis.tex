@@ -235,13 +235,19 @@ In order to calculate the error $e$ (in cents) between the given frequency to th
 Then the error $e$ can be calculated using:
 \[ e = 1200 * {}^{2}\!\log{\frac{f}{f_t}} \]
 
-\textcolor{red}{MIDI note number calculations.}
-In digital music processing, notes are often represented through MIDI note numbers. A MIDI note number can take a value from $0$ to $127$. The MIDI standard defines \note{C}{4} to be MIDI note number $60$. This makes the standard tuning frequency \note{A}{4} number $69$ and \note{C}{0} number $12$.
+In digital music processing, notes are often represented through MIDI note numbers. A MIDI note number can take a value from 0 to 127. The MIDI standard defines \note{C}{4} to be MIDI note number 60. This makes the standard tuning frequency \note{A}{4} number 69 and \note{C}{0} number 12.
 
-To calculate the MIDI note number $m$ corresponding to the closest note to frequency $f$, we can use the number of semitones from \note{C}{0} $n_s$ and the fact that \note{C}{0} has note number $12$:
-% \[ m = n_s + 12 \]
+The MIDI note number $m$ corresponding to the note closest to frequency $f$ can be calculated using the semitone distance from a frequency with a known MIDI note number. Let $m(N_O)$ denote the MIDI note number of $N_O$:
 \begin{align*}
-    m = n_s^{C_0} + 12
+    m &= \round{12 * {}^{2}\!\log{\frac{f}{f_{N_O}}}} + m(N_O)% \\
+      % &\approx \round{12 * {}^{2}\!\log{\frac{f}{16.352}}} + 12 \\
+      % &= \round{12 * {}^{2}\!\log{\frac{f}{f_{C_0}}}} + 12
+\end{align*}
+Conversely, the frequency $f$ of the note corresponding to MIDI number $m$ can be calculated as follows:
+\begin{align*}
+    f &= f_{N_O} * 2^{(m - m(N_O)) / 12}% \\
+      % &\approx 16.352 * 2^{(m - 12) / 12} \\
+      % &= f_{C_0} * 2^{(m - 12) / 12}
 \end{align*}
 
 \subsection{Envelope and transients}
