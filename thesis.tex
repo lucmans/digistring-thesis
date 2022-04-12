@@ -69,8 +69,12 @@ Our research focuses on monophonic pitch estimation. Here, we assume the signal 
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
-TODO: Researching pitch estimation is not accessible, as multiple AMT subproblems (e.g. onset detection) have to be solved in order to produce a working prototype on which experiments can be performed. This hinders research of one specific subproblem. Furthermore, as every pitch estimation system is set up slightly different, the combinations of different solutions for the subproblems cannot easily be experimented on. Lastly, experimentation is difficult...
+TODO: Researching pitch estimation is not accessible, as multiple AMT subproblems (e.g. onset detection) have to be solved in order to produce a working prototype on which experiments can be performed. This hinders research of one specific subproblem.
+
+Furthermore, as every pitch estimation system is set up slightly different, the combinations of different solutions for the subproblems cannot easily be experimented on.
+Lastly, experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures.
 To solve these problem, we set out to create a framework in which...
+TODO!!! Our framework provides scientist willing to research real-time pitch estimation an efficient implementation of many basic functions (e.g. efficient overlapping buffers, debug wave form generation, note synthesis based on estimation).
 
 \textcolor{gray}{TODO: Rewrite this paragraph.} The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.
 
@@ -93,12 +97,11 @@ Many different transform have been researched for pitch estimation, however, Fou
 \textcolor{gray}{Jargon required to understand this paper.}
 
 \subsection{Audio in computers}
-% \textcolor{gray}{TODO: Audio is represented by samples. We get these samples from the OS audio driver. Driver latency.}
 Audio in computers is represented through a series of equally spaced samples. A sample is the height of the audio wave at a specific point in time. The sample rate determines the number of samples per second used for representing the audio. The sample format determines how the height of the audio wave is represented in a sample. Often used formats are 16/24 bit integers and 32 bit IEEE-754 floating point numbers (which we will refer to as floats). The integer samples simply uniformly spread the range of the waveform over range of the integer~\cite{dspfloat}. Float samples typically take values in $[-1, 1]$; samples with values outside this range are considered to be clipping. Because float samples have 24 bits precision (23 mantissa bits and a sign bit~\cite{ieeefloat}), 24 bit integer samples can converted lossless to float samples.
 % The quality of a format is often expressed as bit depth. This is fine when comparing different integer formats, as an integer uses its full bit depth to store the height of the 
 
-When working with audio input/output in computers, a small latency is always introduced~\cite{presonus}. One part of the latency comes from the used audio hardware and is not configurable. The other part comes from the audio driver's buffers. Audio drivers work on buffer of samples instead of single samples for efficiency. A full buffer of data has to be gathered from the audio in, or a full buffer has to be send to the audio out, so the first or last sample respectively is one buffer length behind. The buffer length is calculated by dividing the number of samples in the buffer by the sample rate. In order to minimize latency, the number of samples per buffer has to be minimized and the sample rate has to be maximized. Since these latencies are outside of Digistring's control and can be mostly circumvented by running Digistring's algorithms on specialized hardware, we won't take them into account in this thesis.
 % When working with audio input/output in modern operating systems such as Linux or Windows, the audio samples are gathered/retrieved from the OS's audio driver. The audio driver
+When working with audio input/output in computers, a small latency is always introduced~\cite{presonus}. One part of the latency comes from the used audio hardware and is not configurable. The other part comes from the audio driver's buffers. Audio drivers work on buffer of samples instead of single samples for efficiency. A full buffer of data has to be gathered from the audio in, or a full buffer has to be send to the audio out, so the first or last sample respectively is one buffer length behind. The buffer length is calculated by dividing the number of samples in the buffer by the sample rate. In order to minimize latency, the number of samples per buffer has to be minimized and the sample rate has to be maximized. Since these latencies are outside of Digistring's control and can be mostly circumvented by running Digistring's algorithms on specialized hardware, we won't take them into account in this thesis.
 
 \subsection{Fourier transform}
 The Fourier transform is a mathematical transform which transforms a function of time to a complex valued function of frequency and phase. Here, the magnitude represents the amplitude and the argument represents the phase of the corresponding sine wave. The Fourier transform works on continuous functions and assumes an infinite time interval. Concepts such as continuous and infinite cannot be represented by a computer. Consequently, the discrete Fourier transform (DFT) has to be used for Fourier analyses on computers. The DFT can efficiently be calculated using the fast Fourier transform (FFT) algorithm.
@@ -299,6 +302,7 @@ In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect 
 
 As mentioned in Section~\ref{sec:related}, when using the CQT transform, none of the non-octave overtones coincides with a CQT bin as the CQT bins are exponentially spaced like the notes in a scale. This causes the frequencies of the overtones to spread out over all other bins due to spectral leakage, resulting in more noise in the frequency domain. Furthermore, overtones are important for discerning fundamentals from noise generated by transients. By using a Fourier transform tuned to a specific note, all its overtones are also coincide with Fourier bins. By performing a Fourier tuned to every note in the 12 tone scale, we can measure every note and its overtones.
 
+TODO: This thesis mainly focuses on monophonic transcription, as it is much easier to perform. But we can still see how well our strategy works in the polyphonic case.
 TODO: A big problem in monophonic pitch estimation is the octave problem. Octaves are difficult to discern as the fundamental frequency and overtones of the higher note coincide with the overtones of the lower note. A similar problem arises
 TODO: The main problem in polyphonic pitch estimation comes from the occurrence of overtones. As mentioned before, notes in octave tend overshadow each other. Furthermore, as shown in Table~\ref{tab:overtones}, the overtones of a note can coincide with the...
 TODO: Overtone overlap and polyphonic difficulty.
@@ -354,7 +358,11 @@ TODO: Overtone overlap and polyphonic difficulty.
 \end{table}
 
 
-\section{Thesis content}
+\section{Pitch estimation}
+The main problem we try to solve is pitch estimation.
+
+When working in real-time, actions which are normally trivial have to be analyzes critically. For instance, sleep when retrieving samples from audio in, non-blocking overlap number of samples to carry over...
+
 \textcolor{gray}{Actual research etc. Summary what was done in the research project which we build on. Notes on future work of research project.}
 
 \textcolor{gray}{As mentioned in Section~\ref{sec:related} and shown in our research project, the resolution in the frequency domain is not sufficient for spectral peak selecting methods. Given the info in preliminaries, we can tune Fouriers to specific frequencies.}
@@ -362,12 +370,10 @@ TODO: Overtone overlap and polyphonic difficulty.
 \subsection{Real-time constraint}  \label{sec:constraint}
 \textcolor{gray}{Start with the factors coming into play when choosing the real-time constraint for our system (latency, played notes per second etc). Note on measured latency in Appendix~\ref{sec:ax100}. Empirically found bounds on latency using our latency program}
 
+
 % \subsection{Software amplification}
 % \textcolor{gray}{(Software representation of samples and FFT). The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
 % \textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
-
-\subsection{Digistring overview}
-Different components of Digistring.
 
 \subsection{Basic algorithm for pitch estimation}
 High level algorithm description, which consists of getting samples from a source, estimate note events from samples and output note events.
@@ -380,11 +386,17 @@ Different peak pickers, note finders (in peaks) and note set filtering
 12 Fouriers for each note and it's overtones.
 
 \subsection{Overlapping frames}
+Overlap frames slightly
+
+Real-time sample gathering and overlapping (nonblock)
 
 
-\section{Implementation}
+\section{Digistring}
 \textcolor{gray}{Details about the program I've written. Usage instructions, code choices, code structure, screenshots, expandability}
 
+\textcolor{gray}{General Digistring structure}
+
+\textcolor{gray}{Subsections with details of implementations. E.g. sample getting (sample format conversion in real time, sleeping, etc.), overlapping frames, audio synthesis (no plopping techniques), Estimators+EstimatorGraphics}
 
 
 \section{Experiments}  \label{sec:exp}
