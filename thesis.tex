@@ -56,7 +56,7 @@
 
 
 \section{Introduction}
-Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine what note is played in a given signal.
+Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine which notes are played in a given signal.
 
 Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time (we cannot peak-ahead) and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
 
@@ -69,10 +69,16 @@ Our research focuses on monophonic pitch estimation. Here, we assume the signal 
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
 
+Researching pitch estimation is not accessible, as many other small problems have to be solved in order to produce a working prototype on which experiments can be performed. Furthermore, automated experimentation and result. Because of this, pitch estimation research often only includes some informal testing or no experiments at all.
+
+DSP details problem
+
+This is especially difficult with real-time pitch estimation, as any computational overhead causes extra latency. Moreover, 
+
 TODO: Researching pitch estimation is not accessible, as multiple AMT subproblems (e.g. onset detection) have to be solved in order to produce a working prototype on which experiments can be performed. This hinders research of one specific subproblem.
 
 Furthermore, as every pitch estimation system is set up slightly different, the combinations of different solutions for the subproblems cannot easily be experimented on.
-Lastly, experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures.
+Lastly, experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures. Ambiguity of performance measure (all are both good and bad).
 To solve these problem, we set out to create a framework in which...
 TODO!!! Our framework provides scientist willing to research real-time pitch estimation an efficient implementation of many basic functions (e.g. efficient overlapping buffers, debug wave form generation, note synthesis based on estimation).
 
@@ -386,9 +392,9 @@ Different peak pickers, note finders (in peaks) and note set filtering
 12 Fouriers for each note and it's overtones.
 
 \subsection{Overlapping frames}
-Overlap frames slightly
+Overlap frames for more context. Small caveat; if Estimator is unaware of overlapping, it may find notes completely in the past which weren't found when those samples were the present.
 
-Real-time sample gathering and overlapping (nonblock)
+Real-time sample gathering and overlapping (nonblock).
 
 
 \section{Digistring}
