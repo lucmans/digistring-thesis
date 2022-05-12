@@ -386,7 +386,7 @@ A careful reader may have noticed we actually discussed two different latencies.
 % \textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
 
 \subsection{Basic algorithm for pitch estimation}
-Let us start with constructing the most basic Fourier based monophonic pitch estimation algorithm. Here, we simply return the note closest to the bin with the highest magnitude. Every frame, we try to read a full frame of samples from the audio driver. To minimize our latency, we want to choose our frame size as small as possible while still being able to discern the two closest notes in frequency a typical guitar can produce. Due to the exponentiation nature of notes, the lowest two notes are always the closest two. For a typical guitar, these notes are \note{E}{2} and \note{F}{2}, which have a corresponding frequency of 82.407 Hz and 87.307 Hz respectively. This means we need a frequency resolution of at least $87.307 - 82.407 = 4.9$ Hz. This equates to a frame length of $4.9^{-1} = 0.204$ seconds, or 204 milliseconds. The bin centers do not have to exactly align with the notes to be able to discern them, so in practice we could get away with slightly shorter frames. Still, such large frame lengths are problematic for multiple reasons. A frame will contain multiple played notes when a guitarist plays at a moderate tempo (playing eighth notes in 150 BPM corresponds to 200 millisecond notes). Furthermore, if a frame contains the start of note, the whole frame might be useless due to the transient. Lastly, since we have to wait until the audio driver has enough samples ready for us to fill a frame, the first samples from that frame will be 200 milliseconds old. The average latency of processing a sample is 100 milliseconds due to the frame length alone. This is well over our real-time constraint.
+Let us start with constructing the most basic Fourier based monophonic pitch estimation algorithm. Here, we simply return the note closest to the bin with the highest magnitude. Every frame, we try to read a full frame of samples from the audio driver. To minimize our latency, we want to choose our frame size as small as possible while still being able to discern the two closest notes in frequency a typical guitar can produce. Due to the exponential nature of notes, the lowest two notes are always the closest two. For a typical guitar, these notes are \note{E}{2} and \note{F}{2}, which have a corresponding frequency of 82.407 Hz and 87.307 Hz respectively. This means we need a frequency resolution of at least $87.307 - 82.407 = 4.9$ Hz. This equates to a frame length of $4.9^{-1} = 0.204$ seconds, or 204 milliseconds. The bin centers do not have to exactly align with the notes to be able to discern them, so in practice we could get away with slightly shorter frames. Still, such large frame lengths are problematic for multiple reasons. A frame will contain multiple played notes when a guitarist plays at a moderate tempo (playing eighth notes in 150 BPM corresponds to 200 millisecond notes). Furthermore, if a frame contains the start of note, the whole frame might be useless due to the transient. Lastly, since we have to wait until the audio driver has enough samples ready for us to fill a frame, the first samples from that frame will be 200 milliseconds old. The average latency of processing a sample is 100 milliseconds due to the frame length alone. This is well over our real-time constraint.
 
 \subsection{Overlapping frames}
 Overlap frames for more context. Small caveat; if Estimator is unaware of overlapping, it may find notes completely in the past which weren't found when those samples were the present.
@@ -419,12 +419,15 @@ Quadratic interpolation can be combined with zero-padding for better results~\ci
 \subsection{Peak picking}
 Gaussian peak picking. Min-max peak picking. Peak filtering.
 
-% \subsection{High resolution estimator}
-% Most basic Fourier based estimator. Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...).\\
-% Different peak pickers, note finders (in peaks) and note set filtering
+\subsection{Note selection from peaks}
+Different strategies to select notes from peaks.
 
-% \subsection{Tuned Fourier transforms}
-% 12 Fouriers for each note and it's overtones.
+\subsection{High resolution estimator}
+Most basic Fourier based estimator. Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...).\\
+Different peak pickers, note finders (in peaks) and note set filtering
+
+\subsection{Tuned Fourier transforms}
+12 Fouriers for each note and it's overtones.
 
 
 \section{Digistring}
