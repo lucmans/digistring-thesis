@@ -113,7 +113,7 @@ The 0 Hz bin corresponds to the so called DC offset. This is the average amplitu
 % \textcolor{red}{TODO: Spectrum beyond the Nyquist frequency is reflected over the Nyguist frequency and added to the spectrum. In practice causes noise in general and in the case of peaks beyond the Nyquist frequency, even aliasing of peaks}.
 This implies we cannot simply downsample the input signal for an easy performance gain, as it might introduce noise.
 
-The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may distort the waveform if the beginning and end of a frame do not align and leads to artifacts in the spectrum. For example, in Figure~\ref{fig:framedistortion}, we take a frame shown by the red lines. The frame is not aligned to a period of the waveform and causes a distortion when repeated as seen in the second graph. Note that only sine waves with frequencies which are a multiple of $\Delta f_{bin}$ would exactly fit the frame. In our example, the distortion introduces a new high frequency component from suddenly going up and down around the frame border. It also introduces a low frequency component, as the distance between two peaks within a frame is shorter can the distance of two peaks between frames. The introduction of these new frequencies is a form of spectral leakage, as the peak in the continuous spectrum corresponding to the sine frequency leaks into multiple bins. We can remove the distortion around frame borders by forcing the beginning and end of a frame to align. This is commonly done by applying a window function, which forces the frame ends to zero.
+The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may distort the waveform if the beginning and end of a frame do not align and leads to artifacts in the spectrum. For example, in Figure~\ref{fig:framedistortion}, we take a frame shown by the red lines. The frame is not aligned to a period of the waveform and causes a distortion when repeated as seen in the second graph. Note that only sine waves with frequencies which are a multiple of $\Delta f_{bin}$ would exactly fit the frame. In our example, the distortion introduces a new high frequency component from suddenly going up and down around the frame border. It also introduces a low frequency component, as the distance between two peaks within a frame is shorter can the distance of two peaks between frames. The introduction of these new frequencies is a form of spectral leakage, as the peak in the continuous spectrum corresponding to the sine frequency leaks into multiple bins. We can smooth the distortion around frame borders by forcing the beginning and end of a frame to align. This is commonly done by applying a window function to the frame, which forces both ends of the frame to zero.
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{fig/framedistortion.png}
@@ -121,7 +121,7 @@ The DFT assumes the frame to be periodic. In other words, the frame is regarded 
     \label{fig:framedistortion}
 \end{figure}
 
-Given signal $s(n)$ and window function $w(n)$, we get the resulting signal $\text{res}(n)$ using:
+Given signal $s(n)$ and window function $w(n)$, we get the resulting windowed signal $\text{res}(n)$ using:
 \[ \text{res}(n) = s(n) * w(n) \]
 Figure~\ref{fig:windowfunc} shows the working of a window function on a frame graphically.
 \begin{figure}[H]
@@ -131,8 +131,15 @@ Figure~\ref{fig:windowfunc} shows the working of a window function on a frame gr
     \label{fig:windowfunc}
 \end{figure}
 
-% https://stackoverflow.com/questions/18161870/ola-fft-windows-blackman-nuttall-or-dolph-chebyshev
-\noindent \textcolor{red}{TODO: Spectral leakage from windowing falls into three categories: Scalloping loss, Main lobe width (of a sine wave) and Sidelobes max level/decrease.} The different windows functions trade of between a narrow center lobe and little overall leakage~\cite{windowfunc}, see Figure~\ref{fig:windowfunceffect} for some examples. Using the rectangular window could be considered as using no window function. It simply only takes $n_F$ samples from the wave without any alteration. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage.
+The \textcolor{red}{characteristics} \textcolor{gray}{(TODO: better word)} of spectral leakage from framing can be controlled using different window functions, see Figure~\ref{fig:windowfunceffect} for some examples. Applying no window function is referred to as using a rectangular window, as all the "wanted" samples from the signal are multiplied by 1 and all other samples by 0, effectively framing the signal. We won't discuss individual window function in this section; see Appendix~\ref{sec:windows} for an in depth discussion on the different window functions.
+
+The difference between window functions is often described as a trade-off between having a narrow main lobe width and low side lobe levels~\cite{windowfunc}. This implies we either have little leakage surrounding a bin but high leakage in other bins on average, or much leakage surrounding a bin but little leakage on average. The rectangular window has the narrowest main lobe.
+
+The performance of window functions is often described using equivalent noise bandwidth, coherent power gain and scalloping loss~\cite{windowperf}. Equivalent noise bandwidth signifies the variation in noise floor compared to using a rectangular window. In other words, when transforming a signal, all the noise in the signal will result in some power in every bin, creating a floor in the spectrum. Window functions raise this noise floor by a consistent amount, which is quantified using equivalent noise bandwidth.
+%
+Applying a window function causes the overall amplitude of the frame to decrease, which in turn decreases the power of bins. This reduction is called the coherent power gain and signifies the loss of power in the spectrum.
+%
+\textcolor{red}{TODO: Scalloping loss...}
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{fig/windows.png}
@@ -463,9 +470,9 @@ Low frequency tones from a guitar come in "packets". By detecting the distance b
 \section{Measuring the latency of the AXON AX 100 mkII}  \label{sec:ax100}
 \textcolor{gray}{Lekker meten en weten.}
 
-\section{Effect of different window functions}
-\textcolor{gray}{Plots met effect van verschillende window functions.}
-
+\section{Effect of different window functions}  \label{sec:windows}
+\textcolor{gray}{Plots met effect van verschillende window functions. Rectangular narrowest main lobe and least ENBW. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage (optimal filter). Parzen window (and b-spline windows per extension) have much space between lobes (lobe density. }
+% for ENBW of different windows: https://www.gaussianwaves.com/2020/09/equivalent-noise-bandwidth-enbw-of-window-functions/
 
 \addcontentsline{toc}{section}{Bibliography}
 \bibliographystyle{plain}
