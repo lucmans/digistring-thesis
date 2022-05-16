@@ -68,7 +68,7 @@ Other popular methods used for pitch estimation include non-negative matrix fact
 
 Our research focuses on monophonic pitch estimation. Here, we assume the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. State of the art commercial guitar synthesizer solutions also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive real-time polyphonic pitch estimation.
 
-This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time transcription research often relies Fourier transform based methods.
+This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time pitch estimation research often relies Fourier transform based methods.
 
 Researching pitch estimation is not accessible, as many other small problems have to be solved in order to produce a working prototype on which experiments can be performed. Furthermore, automated experimentation is a lot of work to implement and as a consequence, pitch estimation research often only includes some informal testing or no experiments at all. To combat these problems, we set out to create a modular pitch estimation framework in which every pitch estimation subproblem is implemented as a separate module which can be replaced. This allows the research of one specific subproblem and the effect of specific combinations of subproblems. In addition, it provides researchers with many tools which aid in developing and fine-tuning the solutions to the different subproblems.
 
@@ -82,7 +82,7 @@ This is especially problematic when adhering to a real-time constraint, as extra
 A big problem with Fourier based pitch estimation is the occurrence of overtones~\cite{oud}. Especially octaves are a problem, as the fundamental and all overtones of the higher note overlap with overtones of the lower note. This is referred to as the octave problem~
 \cite{octave}. Overtones are periodic in nature, as they diminishingly repeat every multiple of the fundamental frequency. As a consequence, they could also be detected using a subsequent Fourier transform~\cite{doublefourier} on the frequency domain. However, this does not solve the octave problem.
 
-Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behavior is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the CQT transform is efficiently implemented using Fourier transforms~\cite{cqtfft} and the main problem with Fourier is the fundamentally low frequency resolution on short frames, so we are left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:physsound}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is especially important when performing polyphonic transcription.
+Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behavior is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the CQT transform is efficiently implemented using Fourier transforms~\cite{cqtfft} and the main problem with Fourier is the fundamentally low frequency resolution on short frames, so we are left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:physsound}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is especially important when performing polyphonic pitch estimation.
 
 \textcolor{red}{TODO: Note on problems with other research, such as no experiments, no available source code, assuming normal continuous Fourier behavior instead of DFT, downsampling}
 
@@ -114,7 +114,7 @@ The 0 Hz bin corresponds to the so called DC offset. This is the average amplitu
 This implies we cannot simply downsample the input signal for an easy performance gain, as it might introduce noise.
 
 The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may distort the waveform if the beginning and end of a frame do not align and leads to artifacts in the spectrum. For example, in Figure~\ref{fig:framedistortion}, we take a frame shown by the red lines. The frame is not aligned to a period of the waveform and causes a distortion when repeated as seen in the second graph. Note that only sine waves with frequencies which are a multiple of $\Delta f_{bin}$ would exactly fit the frame. In our example, the distortion introduces a new high frequency component from suddenly going up and down around the frame border. It also introduces a low frequency component, as the distance between two peaks within a frame is shorter can the distance of two peaks between frames. The introduction of these new frequencies is a form of spectral leakage, as the peak in the continuous spectrum corresponding to the sine frequency leaks into multiple bins. We can smooth the distortion around frame borders by forcing the beginning and end of a frame to align. This is commonly done by applying a window function to the frame, which forces both ends of the frame to zero.
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/framedistortion.png}
     \caption{Distortion caused by misaligned framing.}
@@ -124,7 +124,7 @@ The DFT assumes the frame to be periodic. In other words, the frame is regarded 
 Given signal $s(n)$ and window function $w(n)$, we get the resulting windowed signal $\text{res}(n)$ using:
 \[ \text{res}(n) = s(n) * w(n) \]
 Figure~\ref{fig:windowfunc} shows the working of a window function on a frame graphically.
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/window.png}
     \caption{An example of applying a window function to a signal.}
@@ -136,12 +136,12 @@ The \textcolor{red}{characteristics} \textcolor{gray}{(TODO: better word)} of sp
 Applying no window function is referred to as using a rectangular window, as all the "wanted" samples from the signal are multiplied by 1 and all other samples by 0, effectively framing the signal. We won't discuss individual window function in this section; see Appendix~\ref{sec:windows} for an in depth discussion on the different window functions.
 
 The leakage behavior of a window function can be quantified by performing a Fourier transform on the window function. The resulting frequency domain shows the amount of leakage in neighboring bins compared to the power of the center bin. To show the leakage behavior of frequencies which do not align with a bin, we can zero-pad the window function, which causes over-sampling in the frequency domain. Zero-padding is further discussed in Section~\ref{sec:zeropadding}. Figure~\ref{fig:winleak} shows the leakage of a rectangular window when a frequency exactly matches the center frequency of a bin and the leakage when a frequency is exactly between bins. Here we can see the leakage spectrum has lobes of leakage. The lobe containing the center bin is called the main lobe and the other lobes are called side lobes. The different window functions trade-off between having a narrow main lobe width and low side lobe levels~\cite{windowfunc}.
-\begin{figure}[H]
+\begin{figure*}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/winleak.png}
     \caption{\textcolor{red}{TODO: Better image and caption.} Leakage of rectangular window...}
     \label{fig:winleak}
-\end{figure}
+\end{figure*}
 
 % Window functions alter the amplitude of the original signal. This causes...
 The performance of window functions is often described using equivalent noise bandwidth, coherent power gain and scalloping loss~\cite{windowperf3, windowperf2, windowperf}. Equivalent noise bandwidth signifies the variation in noise floor compared to using a rectangular window. In other words, when transforming a signal, all the noise in the signal will result in some power in every bin, creating a floor in the spectrum. Window functions raise this noise floor by a consistent amount, which is quantified using equivalent noise bandwidth.
@@ -260,7 +260,7 @@ Conversely, the frequency $f$ of the note corresponding to MIDI number $m$ can b
 % \subsection{Science of sound}  \label{sec:physsound}
 \subsection{Physical properties of sound}  \label{sec:physsound}
 The perceived loudness of a note over time can be described using an ADSR envelope. The ADSR envelope of a played note is the convex hull of the waveform of the signal, see Figure~\ref{fig:adsr} for an example. This convex hull can be divided into four parts: Attack, Decay, Sustain and Release. When a note is strummed on the guitar, a percussive sound is generated which causes a loud and sharp attack along with the note. This percussive sound quickly decays and only the actually fretted note will sustain. Finally, when the note is released, it dies out quickly.
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/envelope.png}
     \caption{Example of an ADSR envelope \textcolor{red}{(TODO: Better image)}.}
@@ -272,7 +272,7 @@ The percussive sound generated when strumming a note is called a transient. Tran
 When playing a note on an instrument, many sine waves are generated. The most notable frequency is called the fundamental frequency and determines what note is actually played. Integer multiples of the fundamental frequency can resonate and give rise to harmonic overtones~\cite{overtones}. In practice, these overtones are not exact integer multiples due to non-linear effects.
 
 Many other frequencies are generated along with the fundamental and its overtones. The instrument specific pattern of these frequencies, along with the characteristics of the overtones, is called the timbre of the instrument~\cite{timbre}. The timbre is what differentiates the sound of the same note played on two different instruments~\cite{perception}. Generally, the amplitude of the timbre frequencies is low compared to the fundamental frequency and can be disregarded as noise in the frequency domain. Figure~\ref{fig:timbre} shows the effect of timbre on a waveform.
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/timbre.jpg}
     \caption{Example of difference in timbre between instruments compared to a sine wave.}
@@ -300,7 +300,7 @@ In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect 
 \textcolor{red}{TODO: Rewrite.}
 As mentioned in Section~\ref{sec:related}, when using the CQT transform, none of the non-octave overtones coincides with a CQT bin as the CQT bins are exponentially spaced like the notes in a scale. This causes the frequencies of the overtones to spread out over bins, resulting in more noise in the frequency domain. Furthermore, overtones are important for discerning fundamentals from noise generated by transients. By using a Fourier transform tuned to a specific note, all its overtones are also coincide with Fourier bins. By performing a Fourier tuned to every note in the 12 tone scale, we can measure every note and its overtones.
 
-\textcolor{gray}{TODO: This thesis mainly focuses on monophonic transcription, as it is much easier to perform. But we can still see how well our strategy works in the polyphonic case.
+\textcolor{gray}{TODO: This thesis mainly focuses on monophonic pitch estimation, as it is much easier to perform. But we can still see how well our strategy works in the polyphonic case.
 TODO: A big problem in monophonic pitch estimation is the octave problem. Octaves are difficult to discern as the fundamental frequency and overtones of the higher note coincide with the overtones of the lower note. A similar problem arises
 TODO: The main problem in polyphonic pitch estimation comes from the occurrence of overtones. As mentioned before, notes in octave tend overshadow each other. Furthermore, as shown in Table~\ref{tab:overtones}, the overtones of a note can coincide with the...
 TODO: Overtone overlap and polyphonic difficulty.}
@@ -394,16 +394,26 @@ A careful reader may have noticed we actually discussed two different latencies.
 % \textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
 
 \subsection{Basic algorithm for pitch estimation}
-Let us start with constructing the most basic Fourier based monophonic pitch estimation algorithm. Here, we simply return the note closest to the bin with the highest magnitude. Every frame, we try to read a full frame of samples from the audio driver. To minimize our latency, we want to choose our frame size as small as possible while still being able to discern the two closest notes in frequency a typical guitar can produce. Due to the exponential nature of notes, the lowest two notes are always the closest two. For a typical guitar, these notes are \note{E}{2} and \note{F}{2}, which have a corresponding frequency of 82.407 Hz and 87.307 Hz respectively. This means we need a frequency resolution of at least $87.307 - 82.407 = 4.9$ Hz. This equates to a frame length of $4.9^{-1} = 0.204$ seconds, or 204 milliseconds. The bin centers do not have to exactly align with the notes to be able to discern them, so in practice we could get away with slightly shorter frames. Still, such large frame lengths are problematic for multiple reasons. A frame will contain multiple played notes when a guitarist plays at a moderate tempo (playing eighth notes in 150 BPM corresponds to 200 millisecond notes). Furthermore, if a frame contains the start of note, the whole frame might be useless due to the transient. Lastly, since we have to wait until the audio driver has enough samples ready for us to fill a frame, the first samples from that frame will be 200 milliseconds old. The average latency of processing a sample is 100 milliseconds due to the frame length alone. This is well over our real-time constraint.
+Let us start with constructing the most basic Fourier based monophonic pitch estimation algorithm. Here, we simply return the note closest to the bin with the highest magnitude. Every frame, we try to read a full frame of samples from the audio driver and apply a window function to the frame. To minimize our latency, we want to choose our frame size as small as possible while still being able to discern the two closest notes in frequency a typical guitar can produce. Due to the exponential nature of notes, the lowest two notes are always the closest two. For a typical guitar, these notes are \note{E}{2} and \note{F}{2}, which have a corresponding frequency of 82.407 Hz and 87.307 Hz respectively. This means we need a frequency resolution of at least $87.307 - 82.407 = 4.9$ Hz. This equates to a frame length of $4.9^{-1} = 0.204$ seconds, or 204 milliseconds. The bin centers do not have to exactly align with the notes to be able to discern them, so in practice we could get away with slightly shorter frames. Still, such large frame lengths are problematic for multiple reasons. A frame will contain multiple played notes when a guitarist plays at a moderate tempo (playing eighth notes in 150 BPM corresponds to 200 millisecond notes). Furthermore, if a frame contains the start of note, the whole frame might be useless due to the transient. Lastly, since we have to wait until the audio driver has enough samples ready for us to fill a frame, the first samples from that frame will be 200 milliseconds old. The average latency of processing a sample is 100 milliseconds due to the frame length alone. This is well over our real-time constraint.
+
+We implemented this basic Fourier pitch estimation algorithm in Digistring (\texttt{BasicFourier Estimator}). On average, the pitch estimation is performed in 0.4 milliseconds. This means our limiting factor is the long frame lengths, which implies we should look for methods which allow for accurate pitch estimation with lower frequency resolution. Furthermore, especially on low pitched notes, it often picks the note one octave higher than the fundamental frequency. Apart from the octave errors, the pitch estimator often does produce correct results, however, it is completely infeasible for real-time usage due to the low frame rate. As we only produce one note estimate for every frame, we essentially quantize our estimator to eight notes on 150 BPM.
 
 \subsection{Overlapping frames}
-Overlap frames for more context. Small caveat; if Estimator is unaware of overlapping, it may find notes completely in the past which weren't found when those samples were the present.
+As seen in the previous section, a low frame rate is problematic, as our note output rate is synced to the frame processing rate, essentially quantizing our note estimation to the frame processing rate. The straightforward solution would be to decrease the frame length. However, the frame length is limited by the minimum frequency resolution we need. Instead, we can increase the frame rate by partially overlapping subsequent frames.
 
-Real-time sample gathering and overlapping (nonblock).
+Overlapping has several advantages. Apart from the increased frame rate, which decreases accidental quantization, it may decrease the average latency of processing a sample. Furthermore, as transients are very short in the time domain, having more frames over a certain period of time decreases the relative number of frames containing the transient, which causes more frames to have a useful note estimate, see Figure~\ref{fig:overlap_transient} for a graphical explanation.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/overlap_transient.jpg}
+    \caption{\textcolor{red}{TODO: Correct image showing overlap instead of just shorter frames.} Given the signal given on top with a transient at T, relatively less frame estimations are ruined by the transient when using a higher frame rate.}
+    \label{fig:overlap_transient}
+\end{figure}
 
-% \subsection{Bin interpolation}
+As two subsequent frames share information when overlapping, the estimation from subsequent frames is correlated. This limits the usefulness of overlapping beyond a certain overlap ratio~\cite{overlap}. However, as long as we don't overlap so much that samples are gathered faster than we can process them, overlapping doesn't incur an addition latency on the pitch estimation system.
+
+When performing real-time estimation, instead of overlapping a constant ratio between frames, we can overlap based on the rate at which the audio driver acquires samples and our previous frame processing time. Time spend waiting for samples is effectively wasted time, as that time could've been spent on generating note estimations. Instead, we can always retrieve all currently available samples from the audio driver and fill the rest of the frame with samples from the previous frame. This ensures maximum possible overlap every frame.
+
 \subsection{Zero padding}  \label{sec:zeropadding}
-% \textcolor{gray}{TODO: Split this in two subsections?}
 The number of output bins is determined by the number of samples that is transformed. We can artificially increase the number of samples in a transform by appending zeros to the frame. This technique is called zero padding. As only silence is added to the frame, it does not alter the spectrum. It is important to note that it does not increase the resolution of the DFT, it merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together form one big peak in the smoothed spectrum~\cite{zeropad2}. This form of interpolation is relatively compute intensive~\cite{interpolnozero}.
 
 \subsection{Lagrange parabolic interpolation}
@@ -444,7 +454,7 @@ TODO!!! Our framework provides scientist willing to research real-time pitch est
 
 \textcolor{gray}{General Digistring structure}
 
-\textcolor{gray}{Subsections with details of implementations. E.g. sample getting (sample format conversion in real time, sleeping, etc.), overlapping frames, no accurate amplitude measurement but make everything relative to loudest measured signal, audio synthesis (no plopping techniques), Estimators+EstimatorGraphics}
+\textcolor{gray}{Subsections with details of implementations. E.g. sample getting (sample format conversion in real time, sleeping, etc.), (Overlap frames for more context. Small caveat; if Estimator is unaware of overlapping, it may find notes completely in the past which weren't found when those samples were the present), no accurate amplitude measurement but make everything relative to loudest measured signal, audio synthesis (no plopping techniques), Estimators+EstimatorGraphics}
 Lastly, experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures. Ambiguity of performance measure (all are both good and bad).
 
 \subsection{Playback latency}  \label{sub:playback_latency}
@@ -476,7 +486,7 @@ Low frequency tones from a guitar come in "packets". By detecting the distance b
 % for ENBW of different windows: https://www.gaussianwaves.com/2020/09/equivalent-noise-bandwidth-enbw-of-window-functions/
 
 
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/windows.png}
     % \includegraphics[width=\linewidth]{fig/window_rect.png}
