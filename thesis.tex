@@ -16,6 +16,7 @@
 \usepackage{float}
 \usepackage[linesnumbered,lined,commentsnumbered]{algorithm2e}
 \usepackage{enumitem}
+\usepackage{dblfloatfix}
 \ifdefined\noimage  % For omitting images during build from CLI
     \usepackage[demo]{graphicx}
 \else
@@ -136,10 +137,10 @@ The \textcolor{red}{characteristics} \textcolor{gray}{(TODO: better word)} of sp
 Applying no window function is referred to as using a rectangular window, as all the "wanted" samples from the signal are multiplied by 1 and all other samples by 0, effectively framing the signal. We won't discuss individual window function in this section; see Appendix~\ref{sec:windows} for an in depth discussion on the different window functions.
 
 The leakage behavior of a window function can be quantified by performing a Fourier transform on the window function. The resulting frequency domain shows the amount of leakage in neighboring bins compared to the power of the center bin. To show the leakage behavior of frequencies which do not align with a bin, we can zero-pad the window function, which causes over-sampling in the frequency domain. Zero-padding is further discussed in Section~\ref{sec:zeropadding}. Figure~\ref{fig:winleak} shows the leakage of a rectangular window when a frequency exactly matches the center frequency of a bin and the leakage when a frequency is exactly between bins. Here we can see the leakage spectrum has lobes of leakage. The lobe containing the center bin is called the main lobe and the other lobes are called side lobes. The different window functions trade-off between having a narrow main lobe width and low side lobe levels~\cite{windowfunc}.
-\begin{figure*}[h]
+\begin{figure*}[b]
     \centering
     \includegraphics[width=\linewidth]{fig/winleak.png}
-    \caption{\textcolor{red}{TODO: Better image and caption.} Leakage of rectangular window...}
+    \caption{\textcolor{red}{TODO: Better image.} Leakage behavior of the rectangular window. The orange lobes represent the frequency response of the rectangular window function; the blue lines represent the signal power measured in each bin given a signal frequency at the center of the main lobe of the frequency response of the window function. In the top plot, the frequency of the signal exactly matches the center frequency of a bin. If we then look at the leakage at every bin position, we see that all signal power goes into the center bin and nothing into any other bin. In the bottom plot, we shifted the frequency response half a bin up to simulate a frequency in the signal half a bin higher than some arbitrary bin. If we now look at the height of the frequency response at every bin position, we can see that the signal power diminishingly leaks into all subsequent bins.}
     \label{fig:winleak}
 \end{figure*}
 
@@ -176,7 +177,7 @@ The range of a typical electric guitar in standard tuning is from \note{E}{2} up
 The 12-TET music system only describes the relation between two notes in an interval. In order to play with other musicians in harmony, an arbitrary note has to be tuned to a specific frequency. Per ISO 16, the standard tuning frequency of the \note{A}{4} is 440 Hz within an accuracy of 0.5 Hz~\cite{isoa}. In this thesis, we will always assume a 12-TET music system with a 440 Hz tuning note.
 
 Using the above information, we can translate frequencies into scientific note names and vice versa. In order to numerically work with note names, we assign a value to each note as shown in Table~\ref{tab:notenames}.
-\begin{table}[H]
+\begin{table}[h]
     \hfill
     \begin{center}
         \begin{tabular}
@@ -280,7 +281,7 @@ Many other frequencies are generated along with the fundamental and its overtone
 \end{figure}
 
 In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect to notes in 12-TET. This is true for all overtones, except for octaves, which are all overtones numbers equal to $2^n - 1$ for every $n$. In Table~\ref{tab:overseries}, we show an example for the overtones of \note{C}{4}. Note that the series of errors is always the same, regardless of what the starting note is. 
-\begin{table}[H]
+\begin{table}[h]
     \centering
     \begin{tabular}{rrcrr}
         $n$ & $f_{\text{overtone}}$ & closest note & $f_\text{note}$ & error \\
@@ -304,7 +305,7 @@ As mentioned in Section~\ref{sec:related}, when using the CQT transform, none of
 TODO: A big problem in monophonic pitch estimation is the octave problem. Octaves are difficult to discern as the fundamental frequency and overtones of the higher note coincide with the overtones of the lower note. A similar problem arises
 TODO: The main problem in polyphonic pitch estimation comes from the occurrence of overtones. As mentioned before, notes in octave tend overshadow each other. Furthermore, as shown in Table~\ref{tab:overtones}, the overtones of a note can coincide with the...
 TODO: Overtone overlap and polyphonic difficulty.}
-\begin{table}[H]
+\begin{table}[h]
     \centering
     \hfill
     \begin{tabular}{r|l}
@@ -340,7 +341,7 @@ TODO: Overtone overlap and polyphonic difficulty.}
     \caption{Overtones of C, E and G}
     \label{tab:overtones}
 \end{table}
-\begin{table}[H]
+\begin{table}[h]
     \centering
     \begin{tabular}{c|c|c}
         Note & $f$ & $\Delta f$ \\
@@ -484,7 +485,6 @@ Low frequency tones from a guitar come in "packets". By detecting the distance b
 \section{Effect of different window functions}  \label{sec:windows}
 \textcolor{gray}{Plots met effect van verschillende window functions. Rectangular narrowest main lobe and least ENBW. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage (optimal filter). Parzen window (and b-spline windows per extension) have much space between lobes (lobe density. }
 % for ENBW of different windows: https://www.gaussianwaves.com/2020/09/equivalent-noise-bandwidth-enbw-of-window-functions/
-
 
 \begin{figure}[h]
     \centering
