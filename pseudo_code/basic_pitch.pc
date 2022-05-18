@@ -1,0 +1,44 @@
+\IncMargin{1em}
+\begin{algorithm*}
+    \SetKwData{samplerate}{$f_\text{SR}$}
+    \SetKwData{spectrum}{$S$}
+    \SetKwData{samples}{$F$}
+    \SetKwData{windowed}{$F_w$}
+    \SetKwData{framesize}{$|F|$}
+    \SetKwData{fouriersize}{$\floor{\frac{|F|}{2} + 1}$}
+    \SetKwData{maxi}{max\_index}
+
+    \SetKwFunction{readsamples}{get\_frame\_from\_audio\_driver}
+    \SetKwFunction{applywindow}{apply\_window\_function}
+    \SetKwFunction{applyfourier}{fourier\_transform}
+
+    \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
+    \SetKwComment{Comment}{ // }{}
+
+    \Input{Sample rate \samplerate}
+    \Output{Estimated pitch in Hz}
+    \BlankLine
+
+    \samples $\leftarrow$ \readsamples{}\;
+    \BlankLine
+
+    \windowed $\leftarrow$ \applywindow{\samples}\;
+    \spectrum $\leftarrow$ \applyfourier{\windowed}\Comment*[l]{Note that values in \spectrum are complex}
+    \BlankLine
+
+    \tcp{From $2$, as first bin corresponds to $0$ Hz (DC offset)}
+    \tcp{To \fouriersize, as the second half of the Fourier transform is symmetric}
+    \maxi $\leftarrow$ $-1$\;
+    \For{$i\leftarrow 2$ \KwTo \fouriersize} {
+        \If{$|\spectrum[i]|$ $>$ $|\spectrum[\maxi]|$} {
+            \maxi $\leftarrow$ $i$\;
+        }
+    }
+    \BlankLine
+
+    \Return \maxi $*$ $\frac{\samplerate}{\framesize}$\;
+
+    \BlankLine
+    \caption{Basic Fourier based pitch estimation algorithm.}
+    \label{alg:basic_pitch}
+\end{algorithm*}\DecMargin{1em}
