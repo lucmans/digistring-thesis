@@ -1,4 +1,4 @@
-\IncMargin{1em}
+\IncMargin{0.5em}
 \begin{algorithm*}
     \SetKwData{samplerate}{$f_\text{SR}$}
     \SetKwData{spectrum}{$S$}
@@ -15,7 +15,7 @@
     \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
     \SetKwComment{Comment}{ // }{}
 
-    \Input{Sample rate \samplerate}
+    \Input{Sample rate \samplerate in Hz}
     \Output{Estimated pitch in Hz}
     \BlankLine
 
@@ -26,10 +26,10 @@
     \spectrum $\leftarrow$ \applyfourier{\windowed}\Comment*[l]{Note that values in \spectrum are complex}
     \BlankLine
 
-    \tcp{From $2$, as first bin corresponds to $0$ Hz (DC offset)}
+    \tcp{From $3$, as first bin corresponds to DC offset and the second bin max is implicit}
     \tcp{To \fouriersize, as the second half of the Fourier transform is symmetric}
-    \maxi $\leftarrow$ $-1$\;
-    \For{$i\leftarrow 2$ \KwTo \fouriersize} {
+    \maxi $\leftarrow$ $2$\;
+    \For{$i\leftarrow 3$ \KwTo \fouriersize} {
         \If{$|\spectrum[i]|$ $>$ $|\spectrum[\maxi]|$} {
             \maxi $\leftarrow$ $i$\;
         }
@@ -41,4 +41,4 @@
     \BlankLine
     \caption{Basic Fourier based pitch estimation algorithm.}
     \label{alg:basic_pitch}
-\end{algorithm*}\DecMargin{1em}
+\end{algorithm*}\DecMargin{0.5em}
