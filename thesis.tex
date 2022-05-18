@@ -459,11 +459,16 @@ Given the bin number $j$ of the spectral peak location, the frequency $f_i$ corr
 Quadratic interpolation can be combined with zero-padding for better results~\cite{interpolnozero}.
 
 \subsection{Peak picking}
+As explained in Section~\ref{sec:physsound}, overtones are generated along with the fundamental frequency when playing a note on an instrument. On the guitar, the first overtone is often measured as louder than the fundamental frequency, causing our basic pitch algorithm to report the first overtone instead of the fundamental frequency. This is referred to as the octave problem, as the first overtone is an octave from the fundamental frequency.
+
+Instead of looking for the bin with the highest magnitude, we can try to identify all spectral peaks. Then, using these peaks, we can make a better estimate on what note is in played in the frame.
+
+Let us start with the most basic peak picker. Here, we simply return each bin which has two neighboring bins with... \textcolor{red}{TODO}. Too noisy...
 
 Gaussian peak picking. Min-max peak picking. Peak filtering.
 
 \subsection{Note selection from peaks}
-Different strategies to select notes from peaks.
+Different strategies to select notes from peaks. Note filtering.
 
 \subsection{High resolution estimator}
 Most basic Fourier based estimator. Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...).\\
