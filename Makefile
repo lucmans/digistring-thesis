@@ -1,8 +1,8 @@
 
 all:
-	pdflatex thesis.tex
+	pdflatex "\\def\\noimage{}\\input{thesis.tex}"
 	bibtex thesis
-	pdflatex thesis.tex
+	pdflatex "\\def\\noimage{}\\input{thesis.tex}"
 	pdflatex thesis.tex
 
 1:
