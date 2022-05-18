@@ -100,7 +100,7 @@ Audio in computers is represented through a series of equally spaced samples. A 
 % When working with audio input/output in modern operating systems such as Linux or Windows, the audio samples are gathered/retrieved from the OS's audio driver. The audio driver
 When working with audio input/output in computers, a small latency is always introduced~\cite{presonus}. One part of the latency comes from the used audio hardware and is not configurable. The other part comes from the audio driver's buffers. Audio drivers work on buffer of samples instead of single samples for computational efficiency. A full buffer of data has to be gathered from the audio in, or a full buffer has to be send to the audio out, so the first or last sample respectively is one buffer length behind. The buffer length is calculated by dividing the number of samples in the buffer by the sample rate. In order to minimize latency, the number of samples per buffer has to be minimized and the sample rate has to be maximized. Since these latencies are outside of Digistring's control and can be mostly circumvented by running Digistring's algorithms on specialized hardware, we won't take them into account in this thesis.
 
-\subsection{Fourier transform}
+\subsection{Fourier transform}  \label{sec:fourier}
 The Fourier transform is a mathematical transform which transforms a function of time to a complex valued function of frequency and phase. Here, the magnitude represents the amplitude and the argument represents the phase of the corresponding sine wave. The function which maps the frequencies to amplitudes is called the spectrum of the time dependent function. The Fourier transform works on continuous functions and assumes an infinite time interval. Concepts such as continuous and infinite cannot be represented by a computer. Consequently, the discrete Fourier transform (DFT) has to be used for Fourier analyses on computers. The DFT can efficiently be calculated using the fast Fourier transform (FFT) algorithm.
 
 The DFT transforms a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. Technically, the bins do not form a spectrum as they are not continuous, however, within digital signal processing it is still referred to as the spectrum of the frame.% Note that a frame may also referred to as a window.
@@ -415,27 +415,50 @@ As two subsequent frames share information when overlapping, the estimation from
 When performing real-time estimation, instead of overlapping a constant ratio between frames, we can overlap based on the rate at which the audio driver acquires samples and our previous frame processing time. Time spend waiting for samples is effectively wasted time, as that time could've been spent on generating note estimations. Instead, we can always retrieve all currently available samples from the audio driver and fill the rest of the frame with samples from the previous frame. This ensures maximum possible overlap every frame.
 
 \subsection{Zero padding}  \label{sec:zeropadding}
-The number of output bins is determined by the number of samples that is transformed. We can artificially increase the number of samples in a transform by appending zeros to the frame. This technique is called zero padding. As only silence is added to the frame, it does not alter the spectrum. It is important to note that it does not increase the resolution of the DFT, it merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together form one big peak in the smoothed spectrum~\cite{zeropad2}. This form of interpolation is relatively compute intensive~\cite{interpolnozero}.
+The number of output bins is determined by the number of samples that is transformed. We can artificially increase the number of samples in a transform by appending zeros to the frame. This technique is called zero padding. As only silence is added to the frame, it does not alter the spectrum.
 
-\subsection{Lagrange parabolic interpolation}
-\textcolor{red}{TODO: dB scale is only perfect under a Gaussian window. Use better sources and better explanation (lagrange parabolic interpolation is called MQIFFT; doing it in log scale is better (LQIFFT), but exponential even better with correct tuning of exponential parameter (XQIFFT))}.
-A less compute intensive method of interpolation is quadratic interpolation. It interpolates the actual location of a spectral peak between bins by fitting a quadratic function through the bins on a decibel scale~\cite{dbpolate, interpol}. We calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin. Using the magnitude of the peak $y(0)$ and the magnitude of the neighboring bins $y(-1)$ and $y(1)$, we define:
+As mentioned in Section~\ref{sec:fourier}, the frequency resolution of a DFT is $\Delta f_{bin} = \frac{f_{\text{SR}}}{n_F}$. Let $n_{F_P}$ be the zero padded frame size. Given that the sample rate is constant, our frequency resolution will increase by a factor of $\frac{n_{F_P}}{n_F}$. In other words, if we zero pad the frame such that it becomes $x$ times larger, our frequency resolution will increase by a factor $x$.
+
+It is important to note that zero padding does not increase the resolution of the DFT, as no extra information about the original signal is added to the frame. It merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together form one big lobe in the smoothed spectrum~\cite{zeropad2}. However, the interpolated peaks may have a higher amplitude than the original peaks, thus improving the results of our basic pitch estimation algorithm. See Figure~\ref{fig:visualpadding} for a graphical example of this.
+
+Zero padding is relatively compute intensive form of interpolation~\cite{interpolnozero}.% The time complexity of the DFT is $O(N^2)$, where $N$ is the frame size. In the case of the FFT, the time complexity is reduced to $O(N \log N)$.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/zero_pad_interpolate.png}
+    \caption{\textcolor{red}{TODO: Better image.} Left and right figure show DFT spectrum without and with zero padding respectively. The blue lines represent the bin magnitudes. Here, $n_{F_P} = 2 * n_F$. The orange lobes represent the frequency content of the frame if infinite zero padding was applied.}
+    \label{fig:visualpadding}
+\end{figure}
+
+\subsection{Quadratic interpolation}
+A less compute intensive method of interpolation is quadratic interpolation, also know as Quadratically Interpolated FFT (QIFFT)~\cite{interpolnozero}. Given a peak bin and its neighbors, QIFFT interpolates the actual peak location by fitting a parabola through these three points. The vertex of the fitted parabola is the interpolated peak location.
+
+The accuracy of interpolation can be improved by performing the interpolation on a logarithmically-weighted magnitude spectrum (LQIFFT). In other words, the error of interpolation is reduced if the logarithm of the bin power is used. Since a Gaussian curve is a parabola on a logarithmic scale, the interpolation is nearly perfect when using a Gaussian window function on a unweighted spectrum~\cite{interpolgaus}. It isn't perfect, as a true Gaussian window would need infinite long tails~\cite{gauswin}.
+
+\textcolor{gray}{XQIFFT?}
+
+To perform the interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin $b_j$. Using the magnitude of the peak $|b_j|$ and the magnitude of the neighboring bins $|b_{j - 1}|$ and $|b_{j + 1}|$, we define:
 \begin{align*}
-    \alpha &= 20 * {}^{10}\!\log{y(-1)} \\
-    \beta  &= 20 * {}^{10}\!\log{y(0)} \\
-    \gamma &= 20 * {}^{10}\!\log{y(1)}
+    \alpha &= w(|b_{j - 1}|) \\
+    \beta  &= w(|b_{j}|) \\
+    \gamma &= w(|b_{j + 1}|)
 \end{align*}
+Here, $w(x)$ is an arbitrary weighting function. In the case of LQIFFT:
+\[ w(x) = \ln{x} \]
 Then, we can calculate $p$ as follows:
 \[ p = \frac{1}{2} \cdot \frac{\alpha - \gamma}{\alpha - 2\beta + \gamma} \]
-The amplitude in dB $a_i^{dB}$ corresponding to the interpolated peak is:
-\[ a_i^{\text{dB}} = \beta - \frac{(\alpha - \gamma) * p}{4} \]
-The non-dB interpolated amplitude is:
-\[ a_i = 10^{a_i^{\text{dB}} / 20} \]
-Given the bin number $b$ of the spectral peak location, the frequency $f_i$ corresponding to the interpolated peak is:
-\[ f_i = \Delta f_{bin} * (b + p) \]
+The weighted amplitude $a_i^w$ corresponding to the interpolated peak is:
+\[ a_i^w = \beta - \frac{(\alpha - \gamma) * p}{4} \]
+The non-weighted interpolated amplitude is:
+\[ a_i = w^{-1}(a_i^w) \]
+Here, $w^{-1}(x)$ is the inverse of $w(x)$. In the case of LQIFFT:
+\[ w^{-1}(x) = e^{x} \]
+Given the bin number $j$ of the spectral peak location, the frequency $f_i$ corresponding to the interpolated peak is:
+\[ f_i = \Delta f_{bin} * (j + p) \]
+
 Quadratic interpolation can be combined with zero-padding for better results~\cite{interpolnozero}.
 
 \subsection{Peak picking}
+
 Gaussian peak picking. Min-max peak picking. Peak filtering.
 
 \subsection{Note selection from peaks}
