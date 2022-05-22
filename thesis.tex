@@ -3,6 +3,13 @@
 \documentclass[10pt,twocolumn]{article}
 \setlength\columnsep{6mm}
 
+% For omitting images during build from CLI
+\ifdefined\noimage
+    \usepackage[demo]{graphicx}
+\else
+    \usepackage{graphicx}
+\fi
+
 \usepackage[english]{babel}
 \usepackage[stretch=10, shrink=10]{microtype}
 % \usepackage[a4paper]{geometry}
@@ -18,11 +25,6 @@
 \usepackage{enumitem}
 \usepackage{dblfloatfix}
 \usepackage{texlogos}
-\ifdefined\noimage  % For omitting images during build from CLI
-    \usepackage[demo]{graphicx}
-\else
-    \usepackage{graphicx}
-\fi
 
 % Tighter vspace in enumerate/itemize
 % \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
