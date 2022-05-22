@@ -17,6 +17,7 @@
 \usepackage[linesnumbered,lined,commentsnumbered]{algorithm2e}
 \usepackage{enumitem}
 \usepackage{dblfloatfix}
+\usepackage{texlogos}
 \ifdefined\noimage  % For omitting images during build from CLI
     \usepackage[demo]{graphicx}
 \else
@@ -39,7 +40,8 @@
 \newcommand{\round}[1]{\left \lfloor #1 \right \rceil}
 
 
-\title{\textbf{Real-time monophonic guitar pitch estimation\\using 12 tuned concurrent Fourier transforms}}
+% \title{\textbf{Real-time monophonic guitar pitch estimation\\using 12 tuned concurrent Fourier transforms}}
+\title{\textbf{Fourier transform based real-time pitch estimation}\\Assessing the limits of Fourier transform based real-time pitch estimation and construction of a pitch estimation framework}
 \author{Luc de Jonckheere}
 % \date{}
 
@@ -243,7 +245,7 @@ In order to calculate the error $e$ (in cents) between the given frequency to th
 Then the error $e$ can be calculated using:
 \[ e = 1200 * {}^{2}\!\log{\frac{f}{f_t}} \]
 
-In digital music processing, notes are often represented through MIDI note numbers. A MIDI note number can take a value from 0 to 127. The MIDI standard defines \note{C}{4} to be MIDI note number 60. This makes the standard tuning frequency \note{A}{4} number 69 and \note{C}{0} number 12.
+In digital music processing, notes are often represented through MIDI note numbers, as it allows programmers to easily refer to notes using integer values. The MIDI standard defines MIDI note number 69 to be the standard tuning frequency \note{A}{4}. Every semitone up/down respectively increases/decreases the MIDI note number by 1. This makes our tuning note \note{C}{0} number 12. According to the MIDI specification note numbers can take a value from 0 to 127, however, this is only relevant when communicating with MIDI devices. The following equations are valid for any note/MIDI note number.
 
 The MIDI note number $m$ corresponding to the note closest to frequency $f$ can be calculated using the semitone distance from a frequency with a known MIDI note number. Let $m(N_O)$ denote the MIDI note number of $N_O$:
 \begin{align*}
@@ -394,16 +396,18 @@ A careful reader may have noticed we actually discussed two different latencies.
 % \textcolor{gray}{(Software representation of samples and FFT). The FFT works on floating point numbers but most audio interfaces give up to 24 bit integers...}
 % \textcolor{gray}{We found empirically that when amplifying the input signal in software, peaks in the frequency domain are much easier to detect. However, it has to be done carefully to prevent distortion artifacts.}
 
-\subsection{Basic algorithm for pitch estimation}
-Let us start with constructing the most basic Fourier based monophonic pitch estimation algorithm. Here, we simply return the note closest to the bin with the highest magnitude. Every frame, we try to read a full frame of samples from the audio driver and apply a window function to the frame. To minimize our latency, we want to choose our frame size as small as possible while still being able to discern the two closest notes in frequency a typical guitar can produce. Due to the exponential nature of notes, the lowest two notes are always the closest two. For a typical guitar, these notes are \note{E}{2} and \note{F}{2}, which have a corresponding frequency of 82.407 Hz and 87.307 Hz respectively. This means we need a frequency resolution of at least $87.307 - 82.407 = 4.9$ Hz. This equates to a frame length of $4.9^{-1} = 0.204$ seconds, or 204 milliseconds. The bin centers do not have to exactly align with the notes to be able to discern them, so in practice we could get away with slightly shorter frames. Still, such large frame lengths are problematic for multiple reasons. A frame will contain multiple played notes when a guitarist plays at a moderate tempo (playing eighth notes in 150 BPM corresponds to 200 millisecond notes). Furthermore, if a frame contains the start of note, the whole frame might be useless due to the transient. Lastly, since we have to wait until the audio driver has enough samples ready for us to fill a frame, the first samples from that frame will be 200 milliseconds old. The average latency of processing a sample is 100 milliseconds due to the frame length alone. This is well over our real-time constraint.
+\subsection{Basic algorithm for pitch estimation}  \label{sec:basic}
+Let us start with constructing the most basic Fourier based monophonic pitch estimation algorithm. Given a frame of samples and the sample rate, the algorithm will return the MIDI number of the note closest to the most prominent frequency in the frame. First, we apply a window function to the frame and apply the Fourier transform. Then, we iterate over every output bin and check which bin has the highest magnitude. From the bin number, we can calculate the corresponding frequency and subsequently determine the note closest to this frequency. See Algorithm~\ref{alg:basic_pitch} for a pseudo-code implementation.
 
-We implemented this basic Fourier pitch estimation algorithm in Digistring (\texttt{BasicFourier Estimator}). The corresponding pseudo code is given in Algorithm~\ref{alg:basic_pitch}. On average, the pitch estimation is performed in 0.13 milliseconds. This means our limiting factor is the long frame lengths, which implies we should look for methods which allow for accurate pitch estimation with lower frequency resolution. Furthermore, especially on low pitched notes, it often picks the note one octave higher than the fundamental frequency. Apart from the octave errors, the pitch estimator often does produce correct results, however, it is completely infeasible for real-time usage due to the low frame rate. As we only produce one note estimate for every frame, we essentially quantize our estimator to eight notes on 150 BPM.
+To minimize our latency, we want to choose our frame size as small as possible while still being able to discern the two closest notes in frequency a typical guitar can produce. Due to the exponential nature of notes, the lowest two notes are always the closest two. For a typical guitar, these notes are \note{E}{2} and \note{F}{2}, which have a corresponding frequency of 82.407 Hz and 87.307 Hz respectively. This means we need a frequency resolution of at least $87.307 - 82.407 = 4.9$ Hz. This equates to a frame length of $4.9^{-1} = 0.204$ seconds, or 204 milliseconds. The bin centers do not have to exactly align with the notes to be able to discern them, so in practice we could get away with slightly shorter frames. Still, such large frame lengths are problematic for multiple reasons. A frame will contain multiple played notes when a guitarist plays at a moderate tempo (playing eighth notes in 150 BPM corresponds to 200 millisecond notes). Furthermore, if a frame contains the start of note, the whole frame might be useless due to the transient. Lastly, since we have to wait until the audio driver has enough samples ready for us to fill a frame, the first samples from that frame will be 200 milliseconds old. The average latency of processing a sample is 100 milliseconds due to the frame length alone. This is well over our real-time constraint.
+
+We implemented this basic Fourier pitch estimation algorithm in Digistring (\texttt{BasicFourier Estimator}). On average, the pitch estimation is performed in 0.13 milliseconds. This means our limiting factor is the long frame lengths, which implies we should look for methods which allow for accurate pitch estimation with lower frequency resolution. Furthermore, especially on low pitched notes, it often picks the note one octave higher than the fundamental frequency. Apart from the octave errors, the pitch estimator does often produce correct results, however, it is completely infeasible for real-time usage due to the low frame rate. As we only produce one note estimate for every frame, we essentially quantize our estimator to eight notes on 150 BPM. Lastly, our basic estimator has no notion of silence. If no note is played in the frame, we essentially perform pitch estimation on white noise, giving us practically random note guesses.
 \input{pseudo_code/basic_pitch.pc}
 
 \subsection{Overlapping frames}
-As seen in the previous section, a low frame rate is problematic, as our note output rate is synced to the frame processing rate, essentially quantizing our note estimation to the frame processing rate. The straightforward solution would be to decrease the frame length. However, the frame length is limited by the minimum frequency resolution we need. Instead, we can increase the frame rate by partially overlapping subsequent frames.
+As seen in the previous section, a low frame rate is problematic, as our note output rate is synced to the frame processing rate, essentially quantizing our note estimation to the frame processing rate. The straightforward solution would be to decrease the frame length, however, the frame length is limited by the minimum frequency resolution we need. Instead, we can increase the frame rate by partially overlapping subsequent frames.
 
-Overlapping has several advantages. Apart from the increased frame rate, which decreases accidental quantization, it may decrease the average latency of processing a sample. Furthermore, as transients are very short in the time domain, having more frames over a certain period of time decreases the relative number of frames containing the transient, which causes more frames to have a useful note estimate, see Figure~\ref{fig:overlap_transient} for a graphical explanation.
+Overlapping frames has several advantages. Apart from the increased frame rate, which in turn decreases quantization error, it may decrease the average latency of processing a sample. Furthermore, as transients are very short in the time domain, having more frames over a certain period of time decreases the relative number of frames containing the transient, which causes more frames to have a useful note estimate, see Figure~\ref{fig:overlap_transient} for a graphical explanation.
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/overlap_transient.jpg}
@@ -422,11 +426,12 @@ As mentioned in Section~\ref{sec:fourier}, the frequency resolution of a DFT is 
 
 It is important to note that zero padding does not increase the resolution of the DFT, as no extra information about the original signal is added to the frame. It merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together form one big lobe in the smoothed spectrum~\cite{zeropad2}. However, the interpolated peaks may have a higher amplitude than the original peaks, thus improving the results of our basic pitch estimation algorithm. See Figure~\ref{fig:visualpadding} for a graphical example of this.
 
-Zero padding is relatively compute intensive form of interpolation~\cite{interpolnozero}.% The time complexity of the DFT is $O(N^2)$, where $N$ is the frame size. In the case of the FFT, the time complexity is reduced to $O(N \log N)$.
+Zero padding is relatively compute intensive form of interpolation~\cite{interpolnozero}. % The time complexity of the DFT is $O(N^2)$, where $N$ is the frame size. In the case of the FFT, the time complexity is reduced to $O(N \log N)$.
+\textcolor{red}{TODO: }\textcolor{gray}{For a length-N signal, the computational complexity of the Fast Fourier Transform (FFT) algorithm for calculating the DFT is O(N log N). So, zero padding a signal by a factor of D up to a length N D raises the cost by a factor D(logN D + 1). Zero padding by a factor D increases the cost of the algorithm by a factor that is greater than D—this is very expensive.}
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/zero_pad_interpolate.png}
-    \caption{\textcolor{red}{TODO: Better image.} Left and right figure show DFT spectrum without and with zero padding respectively. The blue lines represent the bin magnitudes. Here, $n_{F_P} = 2 * n_F$. The orange lobes represent the frequency content of the frame if infinite zero padding was applied.}
+    \caption{\textcolor{red}{TODO: Better image.} Left and right figure show a DFT spectrum without and with zero padding respectively. Zeros are padded such that $n_{F_P} = 2 * n_F$ holds. The blue lines represent the bin magnitudes. The orange lobes represent the frequency content of the frame if infinite zero padding was applied.}
     \label{fig:visualpadding}
 \end{figure}
 
@@ -435,7 +440,7 @@ A less compute intensive method of interpolation is quadratic interpolation, als
 
 The accuracy of interpolation can be improved by performing the interpolation on a logarithmically-weighted magnitude spectrum (LQIFFT). In other words, the error of interpolation is reduced if the logarithm of the bin power is used. Since a Gaussian curve is a parabola on a logarithmic scale, the interpolation is nearly perfect when using a Gaussian window function on a unweighted spectrum~\cite{interpolgaus}. It isn't perfect, as a true Gaussian window would need infinite long tails~\cite{gauswin}.
 
-\textcolor{gray}{XQIFFT?}
+\textcolor{gray}{TODO: XQIFFT?}
 
 To perform the interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin $b_j$. Using the magnitude of the peak $|b_j|$ and the magnitude of the neighboring bins $|b_{j - 1}|$ and $|b_{j + 1}|$, we define:
 \begin{align*}
@@ -457,35 +462,46 @@ Given the bin number $j$ of the spectral peak location, the frequency $f_i$ corr
 \[ f_i = \Delta f_{bin} * (j + p) \]
 
 Quadratic interpolation can be combined with zero-padding for better results~\cite{interpolnozero}.
+\textcolor{red}{TODO: Must zero-pad such that the three points are contained by one lobe, see Figure~\ref{fig:visualpadding}. On the left, the interpolation would interpolate in the wrong direction!}
 
 \subsection{Peak picking}
 As explained in Section~\ref{sec:physsound}, overtones are generated along with the fundamental frequency when playing a note on an instrument. On the guitar, the first overtone is often measured as louder than the fundamental frequency, causing our basic pitch algorithm to report the first overtone instead of the fundamental frequency. This is referred to as the octave problem, as the first overtone is an octave from the fundamental frequency.
 
 Instead of looking for the bin with the highest magnitude, we can try to identify all spectral peaks. Then, using these peaks, we can make a better estimate on what note is in played in the frame.
 
-Let us start with the most basic peak picker. Here, we simply return each bin which has two neighboring bins with... \textcolor{red}{TODO}. Too noisy...
+Let us start with the most basic peak picker. Here, we simply return each bin which has two neighboring bins with a lower magnitude. This method does correctly identify all significant spectral peaks, but also finds many irrelevant peaks; especially in noisy areas of the spectrum, as there are many local maxima in random noise. For now, we can eliminate the peaks in noise by requiring a minimum peak power, but if the minimum value is not chosen carefully, the sustain of a note may be cut short.
+% These noisy peaks could be filtered by requiring a minimal bin power before a peak is deemed significant, however, this doesn't work well in practice in musical context. For instance, sustained notes will abruptly stop when the peak power goes below the threshold, which is detrimental for a cohesive musical experience. Furthermore, the optimal cut-off value for peak power is dependent on the used equipment and even the placement of the equipment. For example, an electric guitar receives much noise when in close proximity to wireless communication. For instance, having a phone in your pocket which is actively sending network packets or being close to a WiFi access point can result in loud, audible noise.
 
-Gaussian peak picking. Min-max peak picking. Peak filtering.
+\textcolor{red}{TODO: Gaussian peak picking.}
+
+\textcolor{red}{TODO: Min-max peak picking. Peak filtering.}
 
 \subsection{Note selection from peaks}
 Different strategies to select notes from peaks. Note filtering.
 
-\subsection{High resolution estimator}
+\subsection{High resolution estimator}  \label{sec:highrespitch}
 Most basic Fourier based estimator. Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...).\\
-Different peak pickers, note finders (in peaks) and note set filtering
+Different peak pickers, note finders (in peaks) and note set filtering.
+
+All the different parameters which have to be configured for good results.
 
 \subsection{Tuned Fourier transforms}
 12 Fouriers for each note and it's overtones.
 
 
 \section{Digistring}
-\textcolor{gray}{Details about the program I've written. Usage instructions, code choices, code structure, screenshots, expandability}
-TODO!!! Our framework provides scientist willing to research real-time pitch estimation an efficient implementation of many basic functions (e.g. efficient overlapping buffers, debug wave form generation, note synthesis based on estimation).
+% \textcolor{gray}{Details about the program I've written. Usage instructions, code choices, code structure, screenshots, expandability. TODO!!! Our framework provides scientist willing to research real-time pitch estimation an efficient implementation of many basic functions (e.g. efficient overlapping buffers, debug wave form generation, note synthesis based on estimation).}
+%
+Pitch estimation research is not accessible, especially the real-time case. It is not necessarily difficult to implement some pitch estimation algorithm, however, such an implementation would essentially be a black box, as the resulting note estimation does not provide any information on how this estimate came to be. As outlined in Section~\ref{sec:highrespitch}, our pitch estimation algorithm has multiple stages all with multiple parameters which effect the performance of subsequent stages. Since we have extremely limited resolution in the frequency domain in order to minimize latency, it is very important all these parameters can be tuned very carefully. This requires extensive feedback from the estimation process. Furthermore, performing automated experiments is such a hassle, that most other work only includes some informal tests to verify the performance of their pitch estimation systems.
 
+To make pitch estimation research more accessible, we set out to create a pitch estimation framework called Digistring. This framework includes efficient implementations for all concepts described in this thesis, extensive graphical and auditory feedback of the estimation process, the ability to read samples from the audio driver or a file, tools for automated testing/performance measuring and an abstraction for pitch estimators such that all these tools work with any arbitrary pitch estimation algorithm.
+
+Digistring is implemented in \cpluspluslogo, as it is a high performance language suited for real-time systems. It uses FFTW3 for efficient Fourier transforms and SDL2 for graphics and audio. Digistring is developed for Linux, however, since most or all platform specific operations are done through SDL2, Digistring should be easily portable to Windows. Digistring is available at \url{www.github.com/lucmans/digistring}.
+
+\subsection{Digistring overview}
 \textcolor{gray}{General Digistring structure}
 
-\textcolor{gray}{Subsections with details of implementations. E.g. sample getting (sample format conversion in real time, sleeping, etc.), (Overlap frames for more context. Small caveat; if Estimator is unaware of overlapping, it may find notes completely in the past which weren't found when those samples were the present), no accurate amplitude measurement but make everything relative to loudest measured signal, audio synthesis (no plopping techniques), Estimators+EstimatorGraphics}
-Lastly, experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures. Ambiguity of performance measure (all are both good and bad).
+\textcolor{gray}{Subsections with details of implementations. E.g. sample getting (sample format conversion in real time, sleeping, etc.), (Overlap frames for more context. Small caveat; if Estimator is unaware of overlapping, it may find notes completely in the past which weren't found when those samples were the present), no accurate amplitude measurement but make everything relative to loudest measured signal, audio synthesis (no plopping techniques), Estimators+EstimatorGraphics. Lastly, experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures. Ambiguity of performance measure (all are both good and bad).}
 
 \subsection{Playback latency}  \label{sub:playback_latency}
 \textcolor{gray}{Details on how we made the playback latency tool.}

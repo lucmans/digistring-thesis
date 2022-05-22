@@ -7,38 +7,39 @@
     \SetKwData{framesize}{$|F|$}
     \SetKwData{fouriersize}{$\floor{\frac{|F|}{2} + 1}$}
     \SetKwData{maxi}{max\_index}
+    \SetKwData{estimatedfreq}{$f_e$}
 
-    \SetKwFunction{readsamples}{get\_frame\_from\_audio\_driver}
     \SetKwFunction{applywindow}{apply\_window\_function}
     \SetKwFunction{applyfourier}{fourier\_transform}
 
     \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
     \SetKwComment{Comment}{ // }{}
 
-    \Input{Sample rate \samplerate in Hz}
-    \Output{Estimated pitch in Hz}
-    \BlankLine
-
-    \samples $\leftarrow$ \readsamples{}\;
+    \Input{Frame \samples and sample rate \samplerate in Hz}
+    \Output{MIDI number of estimated note}
     \BlankLine
 
     \windowed $\leftarrow$ \applywindow{\samples}\;
-    \spectrum $\leftarrow$ \applyfourier{\windowed}\Comment*[l]{Note that values in \spectrum are complex}
+    \spectrum $\leftarrow$ \applyfourier{\windowed}\;%\Comment*[l]{Note that values in \spectrum are complex}
     \BlankLine
 
-    \tcp{From $3$, as first bin corresponds to DC offset and the second bin max is implicit}
-    \tcp{To \fouriersize, as the second half of the Fourier transform is symmetric}
-    \maxi $\leftarrow$ $2$\;
-    \For{$i\leftarrow 3$ \KwTo \fouriersize} {
+    % \tcp{From $2$, as first bin corresponds to DC offset and the second bin max is implicit}
+    % \tcp{To \fouriersize, as the second half of the Fourier transform is symmetric}
+    \maxi $\leftarrow$ $1$\;
+    \For{$i\leftarrow 2$ \KwTo \fouriersize} {  \label{alg:basic_pitch:for}
         \If{$|\spectrum[i]|$ $>$ $|\spectrum[\maxi]|$} {
             \maxi $\leftarrow$ $i$\;
         }
     }
     \BlankLine
 
-    \Return \maxi $*$ $\frac{\samplerate}{\framesize}$\;
+    \tcp{Most prominent frequency in frame (assumes arrays start at 0)}
+    \estimatedfreq $\leftarrow$ \maxi $*$ $\frac{\samplerate}{\framesize}$\;
+    \BlankLine
+
+    \Return $\round{12 * {}^{2}\!\log{\frac{\estimatedfreq}{440}}} + 69$
 
     \BlankLine
-    \caption{Basic Fourier based pitch estimation algorithm.}
+    \caption{Basic Fourier based pitch estimation algorithm. Note that this algorithm assumes arrays to start at 0. The for-loop on line~\ref{alg:basic_pitch:for} loops from 2, as the first bin (index 0) corresponds to the DC offset and is not relevant. Then, we set the current found max to the second bin (index 1) and check if any subsequent bin is higher. We loop till $\floor{\frac{|F|}{2} + 1}$, as the second half of the Fourier transform is symmetric due to the purely real input data and can be discarded.}
     \label{alg:basic_pitch}
 \end{algorithm*}\DecMargin{0.5em}
