@@ -1,6 +1,6 @@
 
 % \documentclass[10pt]{article}
-\documentclass[10pt,twocolumn]{article}
+\documentclass[a4paper,10pt,twocolumn]{article}
 \setlength\columnsep{6mm}
 
 % For omitting images during build from CLI
@@ -50,7 +50,11 @@
 \begin{document}
 \selectlanguage{english}
 
-\maketitle
+\ifdefined\notitle
+    %
+\else
+    \maketitle
+\fi
 
 
 \section*{Abstract}
@@ -533,8 +537,7 @@ Digistring is divided into three main components, shown graphically in Figure~\r
 \subsection{Sample getter}
 As mentioned in Section~\ref{sub:computer_audio}, audio samples can be represented in different formats. Floating point samples have many advantages over integer of fixed point samples~\cite{dspfloat}. Most audio interfaces and audio file formats support 24 bit integer samples or 32 bit floating point samples as the best quality samples. As 24 bit integer samples can be converted lossless to 32 bit floating point samples, we opted to use 32 bit floating point samples for Digistring. We chose not to convert to 64 bit floating point samples, as it would require us to almost always convert incoming samples for negligible error reduction during sample processing. Furthermore, using our tool \texttt{float\_vs\_double}, we found no difference in normal processing speed between 32 bit and 64 bit floating point numbers. However, when using vector instruction sets such as AVX, the amount or parallelism is limited by the number of bits in the vector registers. As FFTW3 uses these vector instructions, 32 bit floating point number are faster. This can be verified using our \texttt{float\_vs\_double\_fftw3} tool.
 
-Frame overlapping, as discussed in Section~\ref{sec:overlapping}, is implemented in the sample getter. %This way, any newly added sample getter will automatically be able to overlap.
-There are two different overlapping strategies. The first overlaps two subsequent frames by a constant factor between 0 and 1. The number of samples to overlap is the frame size multiplied by this factor. We clamp the resulting number between 1 and frame size - 1 to assure we always overlap at least one sample or at least get one new sample. The second overlapping strategy is only applicable in real time (as in running synced with wall time). Here, the number of overlapping samples is determined by subtracting the number of samples ready to be read from the audio driver from the frame size. The rest of the frame is filled with samples from the previous frame. To limit the amount of overlap, we allow for a minimum and maximum overlap factor to be set. In live usage, the minimum overlap factor should never be met, as it implies that the estimation system can't keep up with the audio driver. In Digistring, we refer to this second overlapping strategy as non-blocking overlap, as we try to overlap such that we won't block on retrieving samples from the audio driver.
+Frame overlapping, as discussed in Section~\ref{sec:overlapping}, is implemented in the sample getter. This way, the pitch estimator doesn't need to know about overlapping and any newly added sample getter will automatically be able to overlap. There are two different overlapping strategies. The first overlaps two subsequent frames by a constant factor between 0 and 1. The number of samples to overlap is the frame size multiplied by this factor. We clamp the resulting number between 1 and frame size - 1 to assure we always overlap at least one sample or at least get one new sample. The second overlapping strategy is only applicable in real time (as in running synced with wall time). Here, the number of overlapping samples is determined by subtracting the number of samples ready to be read from the audio driver from the frame size. The rest of the frame is filled with samples from the previous frame. To limit the amount of overlap, we allow for a minimum and maximum overlap factor to be set. In live usage, the minimum overlap factor should never be met, as it implies that the estimation system can't keep up with the audio driver. In Digistring, we refer to this second overlapping strategy as non-blocking overlap, as we try to overlap such that we won't block on retrieving samples from the audio driver.
 
 A simple overlap implementation would save a copy of the entire input buffer, see Figure~\ref{fig:overlapgraph} for a graphical overview of the algorithm. However, as we know the amount of overlap, or at least an upper bound in the non-blocking case, we can only copy over what we might need next frame. This saved us both time and space, as less data has to be stored and less data has to be copied over. This does however force the every sample getter to never request more samples in subsequent "get sample" calls, and in turn, it prevents using a variable overlap strategy. Using our tool \texttt{memcpy\_speed}, we measured that the time to copy a big buffer is negligible compared to the processing time of a frame. Because of this, we opted to disable this optimization, but left the relevant code in Digistring.
 %
