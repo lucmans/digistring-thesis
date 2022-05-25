@@ -1,6 +1,16 @@
+# Latex build files
 *.aux
 *.bbl
 *.blg
 *.log
 *.out
 *.toc
+
+# Frontpage Latex build files
+/frontpage/*.aux
+/frontpage/*.dvi
+/frontpage/*.log
+/frontpage/*.ps
+
+# Intermediate output
+/no_title.pdf
