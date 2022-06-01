@@ -481,8 +481,7 @@ Here, $w^{-1}(x)$ is the inverse of $w(x)$. In the case of LQIFFT:
 Given the bin number $j$ of the spectral peak location, the frequency $f_i$ corresponding to the interpolated peak is:
 \[ f_i = \Delta f_{bin} * (j + p) \]
 
-Quadratic interpolation can be combined with zero-padding for better results~\cite{interpolnozero}.
-\textcolor{red}{TODO: Must zero-pad such that the three points are contained by one lobe, see Figure~\ref{fig:visualpadding}. On the left, the interpolation would interpolate in the wrong direction!}
+One often overlooked detail is that the three interpolation points need to be in one spectral lobe, as we approximate the shape of the lobe with a quadratic function. Most window functions have a wide enough main lobe width, causing the three points to always be within the main lobe. In the case of the rectangular window, there are at most two bins within the main lobe. By zero padding, we can increase the number of bins in the spectrum and in turn get more than two bins in the main lobe, see Figure~\ref{fig:visualpadding}. In general, zero-padding decreases the error of quadratic interpolation~\cite{interpolnozero}.
 
 
 \subsection{Peak picking}
