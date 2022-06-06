@@ -14,6 +14,7 @@
 \usepackage[stretch=10, shrink=10]{microtype}
 % \usepackage[a4paper]{geometry}
 \usepackage[a4paper, total={6.5in, 9in}]{geometry}
+\usepackage[hyphens]{url}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{amsmath}
@@ -391,7 +392,7 @@ Before we start constructing our pitch estimation system, let us first choose a 
 % Therefore, we will deduce a reasonable real-time constraint from a few different arguments.
 Note that our real-time constraint only considers pitch estimation latency. If we want to do anything with the pitch estimation results in real-time, such as synthesizing audio, additional latency will be introduced. For this reason, we shouldn't put our real-time constraint right at the critical latency, but leave some headroom for the program using our estimated pitches.
 
-Even though the critical latency is subjective, it is the factor determining if a real-time pitch estimation system is usable in musical context. In order to determine the critical latency empirically, we created a tool called \textit{delayed playback}, which plays back recorded audio with an arbitrary latency. Using \textit{delayed playback}, we found a latency of \textcolor{red}{TODO} milliseconds is a reasonable latency at which we can still comfortably play many songs. \textit{Delayed playback} can also be used to verify if a real-time constraint chosen by someone else is reasonable by your own standards. The tool is described in depth in Section~\ref{sub:playback_latency}.% Note that the reported latency from does not include the latencies introduced by the audio drivers and hardware discussed in Section~\ref{sub:computer_audio}.
+Even though the critical latency is subjective, it is the factor determining if a real-time pitch estimation system is usable in musical context. In order to determine the critical latency empirically, we created a tool called \textit{delayed playback}, which plays back recorded audio with an arbitrary latency. Using \textit{delayed playback}, we found a latency of \textcolor{red}{TODO} milliseconds is a reasonable latency at which we can still comfortably play many songs. \textit{Delayed playback} can also be used to verify if a real-time constraint chosen by someone else is reasonable by your own standards.% The tool is described in depth in Section~\ref{sub:playback_latency}.% Note that the reported latency from does not include the latencies introduced by the audio drivers and hardware discussed in Section~\ref{sub:computer_audio}.
 
 % \textcolor{gray}{TODO: Rewrite paragraph, as playing faster is easier due to relying more on muscle memory instead of listening to yourself.}
 The critical latency depends, among other things, on the speed with which notes are played. For instance, let's assume a latency of 50 milliseconds. When playing a slow song consisting of quarter notes at 120 BPM, resulting in 2 notes per second, the latency is only a tenth of the note duration. However, when playing a fast solo consisting of sixteenth notes at 210 BPM, resulting in 12 notes per second, the latency is 70\% of the note duration. This means you hear more of the previous note than the current note for the duration with which the current note is played, which makes playing at fast speeds extra difficult. % This tricks the brain in such a way that it prevents you from staying on beat.
@@ -462,7 +463,7 @@ The accuracy of interpolation can be improved by performing the interpolation on
 
 \textcolor{gray}{TODO: XQIFFT?}
 
-To perform the interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin $b_j$. Using the magnitude of the peak $|b_j|$ and the magnitude of the neighboring bins $|b_{j - 1}|$ and $|b_{j + 1}|$, we define:
+To perform the interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin $b_j$ at index $j$. Using the magnitude of the peak $|b_j|$ and the magnitude of the neighboring bins $|b_{j - 1}|$ and $|b_{j + 1}|$, we define:
 \begin{align*}
     \alpha &= w(|b_{j - 1}|) \\
     \beta  &= w(|b_{j}|) \\
@@ -480,6 +481,35 @@ Here, $w^{-1}(x)$ is the inverse of $w(x)$. In the case of LQIFFT:
 \[ w^{-1}(x) = e^{x} \]
 Given the bin number $j$ of the spectral peak location, the frequency $f_i$ corresponding to the interpolated peak is:
 \[ f_i = \Delta f_{bin} * (j + p) \]
+The Lagrange polynomial describing the interpolation parabola is defined as follows:
+\begin{align*}
+    % f(x) =\ & \sum_{n=-1}^{1} |b_{j + n}| \ \left(\prod_{j=-1, j \neq i}^{1} \frac{x - (j + m)}{(j + n) - (j + m)}\right) \\
+    L(x) =\ & \sum_{n=-1}^{1} w(|b_{j + n}|) \ \left(\prod_{\substack{m=-1\\m \neq n}}^{1} \frac{x - (j + m)}{(j + n) - (j + m)}\right) \\
+\\[-2mm]
+         =\ & \alpha * \frac{x - j}      {(j - 1) - j}       * \frac{x - (j + 1)}{(j - 1) - (j + 1)} \\
+         &+ \beta    * \frac{x - (j - 1)}{j - (j - 1)}       * \frac{x - (j + 1)}{j - (j + 1)} \\
+         &+ \gamma   * \frac{x - (j - 1)}{(j + 1) - (j - 1)} * \frac{x - j}      {(j + 1) - j} \\
+% \\[-2mm]
+%          =\ & \alpha * \frac{x - j}       {-1} * \frac{x - (j + 1)} {-2} \\
+%          &+ \beta    * \frac{x - (j - 1)} {1}  * \frac{x - (j + 1)} {-1} \\
+%          &+ \gamma   * \frac{x - (j - 1)} {2}  * \frac{x - j}       {1} \\
+\\[-2mm]
+         =\ & \alpha * (j - x)              * \frac{x - j - 1} {-2} \\
+         &+ \beta    * (x - j + 1)          * (j + 1 - x) \\
+         &+ \gamma   * \frac{x - j + 1} {2} * (x - j) \\
+% \\[-2mm]
+%          =\ & \alpha * (j - x)                                     * (\frac{1}{2}j + \frac{1}{2} - \frac{1}{2}x) \\
+%          &+ \beta    * (x - j + 1)                                 * (j + 1 - x) \\
+%          &+ \gamma   * (\frac{1}{2}x - \frac{1}{2}j + \frac{1}{2}) * (x - j)\\
+% \\[-2mm]
+%          =\ & \alpha * (0.5x^2 - 0.5x - jx + 0.5j + 0.5j^2) \\
+%          &+ \beta    * (-x^2 + 1 + 2jx - j^2) \\
+%          &+ \gamma   * (0.5x^2 + 0.5x - jx - 0.5j + 0.5j^2) \\
+\\[-2mm]
+         =\ & \alpha * \frac{1}{2}(x^2 - x - 2jx + j + j^2) \\
+         &+ \beta    * (-x^2 + 1 + 2jx - j^2) \\
+         &+ \gamma   * \frac{1}{2}(x^2 + x - 2jx - j + j^2)
+\end{align*}
 
 One often overlooked detail is that the three interpolation points need to be in one spectral lobe, as we approximate the shape of the lobe with a quadratic function. Most window functions have a wide enough main lobe width, causing the three points to always be within the main lobe. In the case of the rectangular window, there are at most two bins within the main lobe. By zero padding, we can increase the number of bins in the spectrum and in turn get more than two bins in the main lobe, see Figure~\ref{fig:visualpadding}. In general, zero-padding decreases the error of quadratic interpolation~\cite{interpolnozero}.
 
@@ -489,23 +519,32 @@ As explained in Section~\ref{sec:physsound}, overtones are generated along with 
 
 Instead of looking for the bin with the highest magnitude, we can try to identify all spectral peaks. Then, using these peaks, we can make a better estimate on what note is in played in the frame.
 
-Let us start with the most basic peak picker. Here, we simply return each bin which has two neighboring bins with a lower magnitude. This method does correctly identify all significant spectral peaks, but also finds many irrelevant peaks; especially in noisy areas of the spectrum, as there are many local maxima in random noise. For now, we can eliminate the peaks in noise by requiring a minimum peak power, but if the minimum value is not chosen carefully, the sustain of a note may be cut short.
+Let us start with the most basic peak picker. Here, we simply return each bin which has two neighboring bins with a lower magnitude. This method does correctly identify all significant spectral peaks, but also finds many irrelevant peaks; especially in noisy areas of the spectrum, as there are many local maxima in random noise. For now, we can eliminate the peaks in noise by requiring a minimum peak power, but if the minimum value is not chosen carefully, the sustain of a note may be cut short. We need some method to select which peaks are significant.
 % These noisy peaks could be filtered by requiring a minimal bin power before a peak is deemed significant, however, this doesn't work well in practice in musical context. For instance, sustained notes will abruptly stop when the peak power goes below the threshold, which is detrimental for a cohesive musical experience. Furthermore, the optimal cut-off value for peak power is dependent on the used equipment and even the placement of the equipment. For example, an electric guitar receives much noise when in close proximity to wireless communication. For instance, having a phone in your pocket which is actively sending network packets or being close to a WiFi access point can result in loud, audible noise.
 
-\textcolor{red}{TODO: Gaussian peak picking.}
+One way to determine if a peak is significant enough is Gaussian average envelope based peak picking~\cite{gausvelope}. Here, we first calculate a Gaussian weighted average envelope of the signal. One envelope point is calculated for every spectral bin. For each bin, we calculate the weighted average of all bins, where a bin's weight is determined by number of bins between a bin and the considered bin. Given this distance $n$, the weight is calculated using a Gaussian function:
+\[ w(n) = e^{-\pi (\frac{n}{\sigma})^2} \]
+Here, the parameter $\sigma$ determines the relative weight of close bins compared to distant bins. Higher values for $\sigma$ causes nearby bins to have a higher weighting.
 
 \textcolor{red}{TODO: Min-max peak picking. Peak filtering.}
 
 
 \subsection{Note selection from peaks}
-\textcolor{gray}{Different strategies to select notes from peaks. Note filtering.}
+Due to overtones and errors in peak picking, not every picked peak corresponds to a note in the signal. Therefor, we need an algorithm which can determine which note is likely played given a set of significant peaks.
+
+In our basic pitch estimation algorithm, we implicitly assume the loudest peak as the fundamental frequency of the note contained in the frame. However, in practice, the first overtone may be louder than the fundamental frequency, causing octave errors. We can instead select the lowest peak as the fundamental frequency, however, this method is susceptible to low frequency noise.
+
+\textcolor{gray}{Likeliest note based on number of overtones that can be found for each peak. Overtone dissonance.}
+
+\textcolor{gray}{Note filtering (only allow note selection in range of instrument).}
 
 
 \subsection{High resolution estimator}  \label{sec:highrespitch}
-\textcolor{gray}{Most basic Fourier based estimator. Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...).\\
-Different peak pickers, note finders (in peaks) and note set filtering.}
+\textcolor{gray}{Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...). See Algorithm~\ref{alg:highres_overview} for an overview.}
 
 \textcolor{gray}{All the different parameters which have to be configured for good results.}
+
+\input{pseudo_code/highres_overview.pc}
 
 
 \subsection{Tuned Fourier transforms}
@@ -533,12 +572,30 @@ Digistring is divided into three main components, shown graphically in Figure~\r
 \end{figure}
 
 
+\subsection{Estimator}
+% \textcolor{gray}{Implementation details about estimator and estimator graphics. As an optimization, we share the input buffer of the estimator with the sample getter. This prevents a copy of the full frame every cycle.}
+%
+The main task of the estimator abstraction is separating pitch estimation from the rest of Digistring, such that the pitch estimation algorithm can easily be replaced. The goal of a pitch estimation algorithm is to convert a frame of sampled audio data to some representation of the notes contained in the frame. Consequently, the interface for an estimator should be a frame of samples as input and note events as output. A note event consists of a note along with onset/offset information expressed as number of samples relative to the start of the frame. %Optionally, note events can also describe special occurrences such as transients.
+
+\textcolor{gray}{TODO: Two phases. Initialization phase and estimation phase. Perform as much as possible in the initialization phase to save computation time in estimation phase. This consequently minimizes latency.}
+
+\textcolor{gray}{TODO: Zero padding implemented in estimator, as estimator needs to control padding. Otherwise, it wouldn't know to only apply a window function to a part of the frame or think it is much longer than in reality. Because it only needs to extend the input buffer and zero the extended part once, it is done in the initialization phase.}
+
+\textcolor{gray}{TODO? As discussed in Section~\ref{sec:fourier}, we don't perform absolute signal power estimation. Instead, all note amplitudes reported by an estimator are on an arbitrary scale. As a consequence, output modules need to keep track of the maximum reported amplitude to which a specific note's amplitude can be compared to.}
+
+\subsubsection{HighRes estimator}
+Details on HighRes estimator implementation.
+
+\subsubsection{Estimator graphics}
+Estimator can optionally define an Estimator graphics object, which holds information regarding the last pitch estimated frame. This information can be rendered using visualizers. Currently, we implemented four visualizers (add screenshots).
+
+
 \subsection{Sample getter}
-As mentioned in Section~\ref{sub:computer_audio}, audio samples can be represented in different formats. Floating point samples have many advantages over integer of fixed point samples~\cite{dspfloat}. Most audio interfaces and audio file formats support 24 bit integer samples or 32 bit floating point samples as the best quality samples. As 24 bit integer samples can be converted lossless to 32 bit floating point samples, we opted to use 32 bit floating point samples for Digistring. We chose not to convert to 64 bit floating point samples, as it would require us to almost always convert incoming samples for negligible error reduction during sample processing. Furthermore, using our tool \texttt{float\_vs\_double}, we found no difference in normal processing speed between 32 bit and 64 bit floating point numbers. However, when using vector instruction sets such as AVX, the amount or parallelism is limited by the number of bits in the vector registers. As FFTW3 uses these vector instructions, 32 bit floating point number are faster. This can be verified using our \texttt{float\_vs\_double\_fftw3} tool.
+As mentioned in Section~\ref{sub:computer_audio}, audio samples can be represented in different formats. Floating point samples have many advantages over integer of fixed point samples~\cite{dspfloat}. Most audio interfaces and audio file formats support 24 bit integer samples or 32 bit floating point samples as the best quality samples. Note that 24 bit integer samples can be converted lossless to 32 bit floating point samples. One could convert to 64 bit floating point samples, which slightly reduces the accumulated floating point rounding errors during digital signal processing. However, the accumulated error is negligible and it would require us to always convert any input samples. Using our tool \texttt{float\_vs\_double}, we found no difference in normal sample processing speed between 32 bit and 64 bit floating point numbers, but this may differ per CPU architecture. When using vector instruction sets such as AVX, the amount or parallelism is limited by the number of bits in the vector registers. As FFTW3 uses these vector instructions, 32 bit floating point number are faster. This can be verified using our \texttt{float\_vs\_double\_fftw3} tool. Given these arguments, we decided to use 32 bit floating point samples for all our samples processing in Digistring.
 
-Frame overlapping, as discussed in Section~\ref{sec:overlapping}, is implemented in the sample getter. This way, the pitch estimator doesn't need to know about overlapping and any newly added sample getter will automatically be able to overlap. There are two different overlapping strategies. The first overlaps two subsequent frames by a constant factor between 0 and 1. The number of samples to overlap is the frame size multiplied by this factor. We clamp the resulting number between 1 and frame size - 1 to assure we always overlap at least one sample or at least get one new sample. The second overlapping strategy is only applicable in real time (as in running synced with wall time). Here, the number of overlapping samples is determined by subtracting the number of samples ready to be read from the audio driver from the frame size. The rest of the frame is filled with samples from the previous frame. To limit the amount of overlap, we allow for a minimum and maximum overlap factor to be set. In live usage, the minimum overlap factor should never be met, as it implies that the estimation system can't keep up with the audio driver. In Digistring, we refer to this second overlapping strategy as non-blocking overlap, as we try to overlap such that we won't block on retrieving samples from the audio driver.
+Frame overlapping, as discussed in Section~\ref{sec:overlapping}, is implemented in the sample getter. This way, the pitch estimator doesn't need to know about overlapping. Furthermore, by implementing overlapping in the base class, any newly added sample getter will automatically be able to overlap. There are two different overlapping strategies. The first overlaps two subsequent frames by a constant factor between 0 and 1. The number of samples to overlap is the frame size multiplied by this factor. We clamp the resulting number between 1 and frame size - 1 to assure we always overlap at least one sample or at least get one new sample. The second overlapping strategy is only applicable when reading samples from an audio device. Here, the number of overlapping samples is determined by subtracting the number of samples ready to be read from the audio driver from the frame size. The rest of the frame is filled with samples from the previous frame. To limit the amount of overlap, we allow for a minimum and maximum overlap factor to be set. In live usage, the minimum overlap factor should never be met, as it implies that the estimation system can't keep up with the incoming samples from the audio driver. In Digistring, we refer to this second overlapping strategy as non-blocking overlap, as we try to overlap such that we won't block on retrieving samples from the audio driver.
 
-A simple overlap implementation would save a copy of the entire input buffer, see Figure~\ref{fig:overlapgraph} for a graphical overview of the algorithm. However, as we know the amount of overlap, or at least an upper bound in the non-blocking case, we can only copy over what we might need next frame. This saved us both time and space, as less data has to be stored and less data has to be copied over. This does however force the every sample getter to never request more samples in subsequent "get sample" calls, and in turn, it prevents using a variable overlap strategy. Using our tool \texttt{memcpy\_speed}, we measured that the time to copy a big buffer is negligible compared to the processing time of a frame. Because of this, we opted to disable this optimization, but left the relevant code in Digistring.
+A simple overlap implementation would save a copy of the entire input buffer, see Figure~\ref{fig:overlapgraph} for a graphical overview of the algorithm. As we know the amount of overlap, or at least an upper bound in the non-blocking case, we can only copy over what we might need next frame. This saved us both time and space, as less data has to be stored and less data has to be copied over. This does however force the sample getter to never request more samples in subsequent "get sample" calls, and in turn, it prevents using a variable overlap strategy. Using our tool \texttt{memcpy\_speed}, we measured that the time to copy a big buffer is negligible compared to the processing time of a frame. Because of this, we opted to disable this optimization.%, but left the relevant code in Digistring.
 %
 \textcolor{gray}{TODO? Swap buffer optimization. Not implemented as it requires estimator to keep input buffer intact.}
 \begin{figure}[h]
@@ -550,13 +607,10 @@ A simple overlap implementation would save a copy of the entire input buffer, se
 
 Since estimators are agnostic to overlapping, the note events reported by the estimator will overlap if the input frames overlap. Since the output modules assume every given note event list to directly follow the preceding one, we have to adjust the note events to only reflect the newly acquired samples. Moreover, it is possible for an estimator to find a note in the beginning of a frame which wasn't found when the note was at the end of the frame. In other words, it may find a note event completely in the past which wasn't found when the relevant samples were the present. We simply discard these past note events, as past information is irrelevant in real time pitch estimation.
 
-We have implemented four different sample getters in Digistring. The most important one is \texttt{audio\_in}, which retrieves samples from the audio driver. This sample getter allows us to play live with Digistring. For performing automated experiments and to aid with parameter fine tuning, we implemented \texttt{audio\_file}. Currently, it only supports reading from \texttt{.wav} files. We also implemented \texttt{sine\_generator} and \texttt{note\_generator}, which generate sine waves tuned to specific frequencies or notes respectively. These are useful for debugging and testing. The generated frequency/note can be changed at runtime. For information about adding additional sample getters to Digistring, see Appendix~\ref{sec:add_to_digistring}.
+When reading samples from an audio device, there might not be enough samples ready to fill a frame. This might cause partial reads on non-blocking audio APIs, which are solved using a basic read loop. Here, we simply loop the read call until the frame is filled, which causes high CPU usage. However, using the sample rate, we can calculate how long we have to wait until enough samples are ready and sleep for this duration. This reduces the CPU usage of Digistring, which makes Digistring run significantly more energy efficient. However, this does require the operating system to guarantee a timely return from the sleep call, which in Linux is only the case when using the real-time kernel. Furthermore, modern CPUs scale down their performance when they aren't fully utilized and it may take some time before the CPU is back in full performance mode, which causes additional latency after sleeping. As the optimization doesn't improve estimation accuracy or latency, we disabled it in Digistring.
 
-\textcolor{gray}{TODO? Get number of ready samples from driver and sleep till enough samples are ready for full frame, which makes running Digistring more energy efficient. Sample format conversion in real time optimization.}
-
-
-\subsection{Estimator}
-\textcolor{gray}{Implementation details about estimator and estimator graphics. There is no accurate amplitude measurement, so everything is relative to the loudest measured signal. Note event struct (Note struct + samples offset and length of the note relative to frame start). As an optimization, we share the input buffer of the estimator with the sample getter. This prevents a copy of the full frame every cycle.}
+We have implemented four different sample getters in Digistring. The most important one is \texttt{audio\_in}, which retrieves samples from the audio driver. This sample getter allows us to play live with Digistring. For performing automated experiments and to aid with parameter fine tuning, we implemented \texttt{audio\_file}. Currently, it only supports reading from \texttt{.wav} files. We also implemented \texttt{sine\_generator} and \texttt{note\_generator}, which generate sine waves tuned to specific frequencies or notes respectively. These are useful for debugging and testing. %The generated frequency/note can be changed at runtime.
+% For information about adding additional sample getters to Digistring, see Appendix~\ref{sec:add_to_digistring}.
 
 
 \subsection{Real time sound synthesis}
@@ -570,7 +624,9 @@ Our sine synthesizer algorithm starts by zeroing the synth buffer. We first try 
 
 There is one small caveat with this algorithm in the polyphonic case. For instance, if we generate two overlapping sine waves of the same frequency, but one sine temporally shifted half a wavelength, the two waves will cancel each other out. If they are generated a full wavelength apart, they will amplify each other maximally and might cause clipping. Mixing multiple audio channels is out of the scope of this thesis, so we simply ignore this problem. In practice, these cases rarely show up.
 
-Currently, we have implemented \textcolor{red}{TODO synths}. For information about adding additional synths to Digistring, see Appendix~\ref{sec:add_to_digistring}.
+% As mentioned in Section~\ref{sec:fourier}, accurate estimation of signal power is difficult. Instead, we rely on relative signal power estimation. .
+
+Currently, we have implemented \textcolor{red}{TODO synths}. %For information about adding additional synths to Digistring, see Appendix~\ref{sec:add_to_digistring}.
 
 
 \subsection{Experimentation tools}
@@ -582,13 +638,15 @@ Currently, we have implemented \textcolor{red}{TODO synths}. For information abo
 
 \textcolor{gray}{Slowdown mode.}
 
-\textcolor{gray}{Synthesizer, especially combined with stereo split input monitoring/synthesizer output.}
+\textcolor{gray}{Synthesizer, especially combined with stereo split input monitoring/synthesizer output. MIDI output version of Digistring.}
 
 \textcolor{gray}{\texttt{generate\_report} tool.}
 
 
-\subsection{Playback latency}  \label{sub:playback_latency}
-\textcolor{gray}{Details on how we made the playback latency tool.}
+% \subsection{Playback latency}  \label{sub:playback_latency}
+% \textcolor{gray}{Details on how we made the playback latency tool.}
+
+% As mentioned in Section~\ref{sec:constraint}, the critical latency is an important measure when setting a real-time constraint. To aid in determining the critical latency, we developed \textit{delayed playback}. This tool plays back incoming audio with an arbitrary latency.
 
 
 
@@ -634,21 +692,21 @@ Currently, we have implemented \textcolor{red}{TODO synths}. For information abo
 
 
 
-\section{Extending Digistring}  \label{sec:add_to_digistring}
-\textcolor{gray}{Title: Expanding Digistring?}
-One of the main goals of Digistring is extendability. This allows people researching pitch estimation or real time sound synthesis to use Digistring as a basis. Currently, there is an interface to add sample getters, estimator along with estimator graphics and synthesizers.
+% \section{Extending Digistring}  \label{sec:add_to_digistring}
+% \textcolor{gray}{Title: Expanding Digistring?}
+% One of the main goals of Digistring is extendability. This allows people researching pitch estimation or real time sound synthesis to use Digistring as a basis. Currently, there is an interface to add sample getters, estimator along with estimator graphics and synthesizers.
 
 
-\subsection{Adding a sample getter}
-TODO
+% \subsection{Adding a sample getter}
+% TODO
 
 
-\subsection{Adding an estimator with estimator graphics}
-TODO
+% \subsection{Adding an estimator with estimator graphics}
+% TODO
 
 
-\subsection{Adding a synthesizer}
-TODO
+% \subsection{Adding a synthesizer}
+% TODO
 
 
 

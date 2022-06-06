@@ -35,7 +35,7 @@ no_title.pdf: thesis.pdf
 frontpaged.pdf: no_title.pdf
 	make -C frontpage
 	pdfunite frontpage/frontpage.pdf no_title.pdf frontpaged.pdf
-	echo -e "\n\nImportant notice! pdfunite breaks internet PDF hyperlinks!\n"
+	echo -e "\n\nImportant notice! pdfunite breaks PDF links!\n"
 
 
 clean:

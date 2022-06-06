@@ -1,0 +1,39 @@
+%\IncMargin{12em}
+\begin{algorithm*}
+    \SetKwData{frame}{frame}
+    \SetKwData{samplerate}{sample\_rate}
+    \SetKwData{windowed}{windowed}
+    \SetKwData{freqdomain}{freq\_domain}
+    \SetKwData{spectrum}{spectrum}
+    \SetKwData{peaks}{peaks}
+    \SetKwData{ipeaks}{interpolated\_peaks}
+    \SetKwData{notes}{notes}
+
+    \SetKwFunction{applywindow}{apply\_window\_function}
+    \SetKwFunction{applyfourier}{fourier\_transform}
+    \SetKwFunction{calcnorms}{calc\_norms}
+    \SetKwFunction{pickpeaks}{pick\_peaks}
+    \SetKwFunction{interpeaks}{interpolate\_peaks}
+    \SetKwFunction{picknotes}{determine\_notes}
+
+    \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
+    \SetKwComment{Comment}{ // }{}
+
+    \Input{Frame \frame and sample rate \samplerate in Hz}
+    \Output{Set of notes contained in the the frame}
+    \BlankLine
+
+    \windowed $\leftarrow$ \applywindow{\frame}\;
+    \freqdomain $\leftarrow$ \applyfourier{\windowed}\;
+    \spectrum $\leftarrow$ \calcnorms{\freqdomain}\;
+    \peaks $\leftarrow$ \pickpeaks{\spectrum}\;
+    \ipeaks $\leftarrow$ \interpeaks{\peaks}\;
+    \notes $\leftarrow$ \picknotes{\ipeaks}\;
+    \BlankLine
+
+    \Return \notes\;
+
+    \BlankLine
+    \caption{Overview of a high resolution estimator.\\Here, the input frame is overlapped with the previous frame.}
+    \label{alg:highres_overview}
+\end{algorithm*}%\DecMargin{12em}
