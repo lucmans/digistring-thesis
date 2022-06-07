@@ -3,6 +3,7 @@
     \SetKwData{frame}{frame}
     \SetKwData{samplerate}{sample\_rate}
     \SetKwData{windowed}{windowed}
+    \SetKwData{zeropadded}{zero\_padded}
     \SetKwData{freqdomain}{freq\_domain}
     \SetKwData{spectrum}{spectrum}
     \SetKwData{peaks}{peaks}
@@ -10,6 +11,7 @@
     \SetKwData{notes}{notes}
 
     \SetKwFunction{applywindow}{apply\_window\_function}
+    \SetKwFunction{zeropad}{zero\_pad}
     \SetKwFunction{applyfourier}{fourier\_transform}
     \SetKwFunction{calcnorms}{calc\_norms}
     \SetKwFunction{pickpeaks}{pick\_peaks}
@@ -24,6 +26,7 @@
     \BlankLine
 
     \windowed $\leftarrow$ \applywindow{\frame}\;
+    \zeropadded $\leftarrow$ \zeropad{\windowed}\;
     \freqdomain $\leftarrow$ \applyfourier{\windowed}\;
     \spectrum $\leftarrow$ \calcnorms{\freqdomain}\;
     \peaks $\leftarrow$ \pickpeaks{\spectrum}\;

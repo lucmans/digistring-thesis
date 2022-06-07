@@ -1,7 +1,7 @@
 \IncMargin{0.5em}
 \begin{algorithm*}
     \SetKwData{samplerate}{$f_\text{SR}$}
-    \SetKwData{spectrum}{$S$}
+    \SetKwArray{spectrum}{$S$}
     \SetKwData{samples}{$F$}
     \SetKwData{windowed}{$F_w$}
     \SetKwData{framesize}{$|F|$}
@@ -27,7 +27,7 @@
     % \tcp{To \fouriersize, as the second half of the Fourier transform is symmetric}
     \maxi $\leftarrow$ $1$\;
     \For{$i\leftarrow 2$ \KwTo \fouriersize} {  \label{alg:basic_pitch:for}
-        \If{$|\spectrum[i]|$ $>$ $|\spectrum[\maxi]|$} {
+        \If{$|\spectrum{i}|$ $>$ $|\spectrum{\maxi}|$} {
             \maxi $\leftarrow$ $i$\;
         }
     }

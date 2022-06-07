@@ -522,7 +522,7 @@ Instead of looking for the bin with the highest magnitude, we can try to identif
 Let us start with the most basic peak picker. Here, we simply return each bin which has two neighboring bins with a lower magnitude. This method does correctly identify all significant spectral peaks, but also finds many irrelevant peaks; especially in noisy areas of the spectrum, as there are many local maxima in random noise. For now, we can eliminate the peaks in noise by requiring a minimum peak power, but if the minimum value is not chosen carefully, the sustain of a note may be cut short. We need some method to select which peaks are significant.
 % These noisy peaks could be filtered by requiring a minimal bin power before a peak is deemed significant, however, this doesn't work well in practice in musical context. For instance, sustained notes will abruptly stop when the peak power goes below the threshold, which is detrimental for a cohesive musical experience. Furthermore, the optimal cut-off value for peak power is dependent on the used equipment and even the placement of the equipment. For example, an electric guitar receives much noise when in close proximity to wireless communication. For instance, having a phone in your pocket which is actively sending network packets or being close to a WiFi access point can result in loud, audible noise.
 
-One way to determine if a peak is significant enough is Gaussian average envelope based peak picking~\cite{gausvelope}. Here, we first calculate a Gaussian weighted average envelope of the signal. One envelope point is calculated for every spectral bin. For each bin, we calculate the weighted average of all bins, where a bin's weight is determined by number of bins between a bin and the considered bin. Given this distance $n$, the weight is calculated using a Gaussian function:
+One way to determine if a peak is significant enough is Gaussian average envelope based peak picking~\cite{gausvelope}. Here, we first calculate a Gaussian weighted average envelope of the spectrum. Only peaks higher than the envelope can be deemed significant. One envelope point is calculated for every spectral bin. For each bin, we calculate the weighted average of all bins, where a bin's weight is determined by number of bins between a bin and the considered bin. Given this distance $n$, the weight is calculated using a Gaussian function:
 \[ w(n) = e^{-\pi (\frac{n}{\sigma})^2} \]
 Here, the parameter $\sigma$ determines the relative weight of close bins compared to distant bins. Higher values for $\sigma$ causes nearby bins to have a higher weighting.
 
@@ -532,9 +532,10 @@ Here, the parameter $\sigma$ determines the relative weight of close bins compar
 \subsection{Note selection from peaks}
 Due to overtones and errors in peak picking, not every picked peak corresponds to a note in the signal. Therefor, we need an algorithm which can determine which note is likely played given a set of significant peaks.
 
-In our basic pitch estimation algorithm, we implicitly assume the loudest peak as the fundamental frequency of the note contained in the frame. However, in practice, the first overtone may be louder than the fundamental frequency, causing octave errors. We can instead select the lowest peak as the fundamental frequency, however, this method is susceptible to low frequency noise.
+In our basic pitch estimation algorithm, we implicitly assume the loudest peak as the fundamental frequency of the note contained in the frame. However, in practice, the first overtone may be louder than the fundamental frequency, causing octave errors. We could select the lowest peak as the fundamental frequency, however, this method is susceptible to low frequency noise.
 
-\textcolor{gray}{Likeliest note based on number of overtones that can be found for each peak. Overtone dissonance.}
+Instead of selecting a single peak, we can look for a group of peaks which form a valid series of overtones, as played notes always come with overtones. As mentioned in Section~\ref{sec:physsound}, overtones are not exact integer multiples of the fundamental frequency, so we need to set a threshold on the maximum allowed difference. Because notes are separated exponentially in frequency, our threshold should scale logarithmically. This is achieved by using cents as a measure of error. Then, we can either count the number of overtones for every peak and return the peak with the most overtones, or add the heights of the overtones up and return the peak with the highest overtone power. See Algorithm~\ref{alg:noteselect} for a pseudo-code implementation.
+\input{pseudo_code/note_select.pc}
 
 \textcolor{gray}{Note filtering (only allow note selection in range of instrument).}
 
@@ -559,7 +560,7 @@ Pitch estimation research is not accessible, especially the real-time case. It i
 
 To make pitch estimation research more accessible, we set out to create a pitch estimation framework called Digistring. This framework includes efficient implementations for all concepts described in this thesis, extensive graphical and auditory feedback of the estimation process, the ability to read samples from the audio driver or a file, tools for automated testing/performance measuring and an abstraction for pitch estimators such that all these features work with any arbitrary pitch estimation algorithm. Even though this thesis focuses on monophonic pitch estimation, Digistring supports both monophonic and polyphonic pitch estimation.
 
-Digistring is implemented in \cpluspluslogo, as it is a high performance language suited for real-time systems. It uses FFTW3 for efficient Fourier transforms and SDL2 for graphics and audio. Digistring is developed for Linux, however, since most or all platform specific operations are done through SDL2, Digistring should be easily portable to Windows. Digistring is available at \url{www.github.com/lucmans/digistring}.
+Digistring is implemented in \cpluspluslogo, as it is a high performance language suited for real-time systems. It uses FFTW3 for efficient Fourier transforms and SDL2 for graphics and audio. Digistring is available at \url{www.github.com/lucmans/digistring}.
 
 
 \subsection{Digistring overview}
@@ -662,6 +663,8 @@ Currently, we have implemented \textcolor{red}{TODO synths}. %For information ab
 
 \section{Future work}  \label{sec:future}
 \textcolor{gray}{What could still be improved/further researched.}
+
+\textcolor{gray}{Overtone dissonance.}
 
 
 \subsection{Waveform packets}  \label{sub:waveform_packet}
