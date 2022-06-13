@@ -1,0 +1,71 @@
+% \IncMargin{0.5em}
+\begin{algorithm*}
+    \SetKwArray{freqs}{frequencies}
+    \SetKwArray{insine}{input\_buffer}
+    \SetKwData{exp}{$\epsilon$}
+    \SetKwData{nfreqs}{n\_freqs}
+    \SetKwData{repsfreq}{reps\_per\_freq}
+    \SetKwData{totalerror}{total\_squared\_error}
+    \SetKwData{lastphase}{last\_phase}
+    \SetKwData{phaseoffset}{phase\_offset}
+    \SetKwData{samplerate}{sample\_rate}
+    \SetKwData{detectedfreq}{detected\_freq}
+    \SetKwData{hzerror}{hz\_error}
+    \SetKwData{squarederror}{squared\_error}
+    \SetKwData{meansquarederror}{mean\_squared\_error}
+
+    \SetKwFunction{estimatepitch}{pitch\_estimation\_algorithm}
+
+    \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
+    \SetKwComment{Comment}{ // }{}
+
+    \Input{Error \exp and pitch estimation algorithm \estimatepitch{}\\\repsfreq and \nfreqs to control precision of error estimation}
+    \Output{Mean squared error of all tested sines}
+    \BlankLine
+
+    \tcp{Return invalid error on invalid exponent}
+    \uIf{\exp $=$ $0$} {
+        \Return \ -1.0\;
+    }
+    \BlankLine
+
+    \tcp{Repetitions per frequency}
+    \repsfreq $\leftarrow$ 5\;
+    \BlankLine
+
+    \tcp{Generate list of frequencies to test}
+    \nfreqs $\leftarrow$ 1200\;
+    \freqs{\nfreqs}\;
+    \For{$i\leftarrow 0$ \KwTo \nfreqs} {
+        \freqs{$i$} $\leftarrow$ $110.0 * 2^{i / \nfreqs}$\;  \label{alg:xqifft_error:freq}
+    }
+    \BlankLine
+
+    \totalerror $\leftarrow$ 0.0\;
+    \ForEach{$f \in$ \freqs} {
+        \lastphase $\leftarrow$ 0.0\;
+        \For{$r\leftarrow 0$ \KwTo \repsfreq} {
+            \tcp{Generate sine wave}
+            \phaseoffset $\leftarrow$ \lastphase $*$ (\samplerate $/$ $f$)\;
+            \For{$i\leftarrow 0$ \KwTo $|\insine|$} {
+                \insine{$i$} $\leftarrow$ $\sin{(2.0 * \pi * (i + \phaseoffset) * f) / \samplerate}$\;
+            }
+            \lastphase $\leftarrow$ \lastphase $+$ ($f$ $/$ (\samplerate $/$ $|\insine|$)) $\bmod$ 1.0\;
+            \BlankLine
+
+            \detectedfreq $\leftarrow$ \estimatepitch{\insine, \exp}\;
+            \hzerror $\leftarrow$ \detectedfreq $-$ $f$\;
+            \squarederror $\leftarrow$ \hzerror $*$ \hzerror\;
+            \totalerror $\leftarrow$ \totalerror $+$ \squarederror\;
+        }
+    }
+    \BlankLine
+
+    \meansquarederror $\leftarrow$ \totalerror $/$ (\repsfreq $*$ \nfreqs)\;
+    \Return \meansquarederror\;
+
+
+    \BlankLine
+    \caption{Calculates the mean squared error of XQIFFT given exponent $\epsilon$ and a pitch estimation algorithm}
+    \label{alg:xqifft_error}
+\end{algorithm*}%\DecMargin{0.5em}

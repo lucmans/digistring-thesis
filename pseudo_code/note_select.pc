@@ -4,7 +4,7 @@
     \SetKwArray{nharmonics}{n\_harmonics}
     \SetKwArray{overpower}{overtone\_power}
     \SetKwData{peakfreq}{peak\_freq}
-    \SetKwData{intoverfreq}{int\_overtone\_freq}
+    \SetKwData{intoverfreq}{harm\_overtone\_freq}
     \SetKwData{centerror}{cent\_error}
     \SetKwData{freq}{freq}
     \SetKwData{amp}{amp}
@@ -21,11 +21,11 @@
     \Output{Likeliest note}
     \BlankLine
 
-    \uIf{$|\ipeaks| == 0$} {
+    \uIf{$|\ipeaks| = 0$} {
         \Return\;
     }
-    \uElseIf{$|\ipeaks| == 1$} {
-        \Return \ipeaks{0}\;
+    \uElseIf{$|\ipeaks| = 1$} {
+        \Return \ipeaks{$0$}\;
     }
     \BlankLine
 
@@ -34,7 +34,7 @@
     \For{$i\leftarrow 0$ \KwTo $|\ipeaks|$} {
         \For{$j\leftarrow i+1$ \KwTo $|\ipeaks|$} {
             \peakfreq $\leftarrow$ \ipeaks{j}.\freq\;
-            \intoverfreq $\leftarrow$ \ipeaks{i}.\freq * $\round{\frac{\ipeaks{j}.\freq}{\ipeaks{i}.\freq}}$\;
+            \intoverfreq $\leftarrow$ \ipeaks{i}.\freq $*$ $\round{\frac{\ipeaks{j}.\freq}{\ipeaks{i}.\freq}}$\;
             \centerror $\leftarrow$ $1200.0 * {}^{2}\!\log(\frac{\peakfreq}{\intoverfreq})$\;
             \If{\centerror $>$ -\overtoneerror $\land$ \centerror $<$ \overtoneerror} {
                 \nharmonics{i}++\;

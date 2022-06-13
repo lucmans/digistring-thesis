@@ -1,0 +1,71 @@
+% \IncMargin{0.5em}
+\begin{algorithm*}
+    \SetKwArray{exps}{exponents}
+    \SetKwArray{errors}{errors}
+    \SetKwData{exp}{$\epsilon$}
+    \SetKwData{minrange}{min\_range}
+    \SetKwData{maxrange}{max\_range}
+    \SetKwData{stepsize}{step\_size}
+    \SetKwData{steps}{steps}
+    \SetKwData{minidx}{min\_idx}
+    \SetKwData{quit}{quit}
+
+    \SetKwFunction{estimatexqifft}{estimate\_xqifft\_error}
+    \SetKwFunction{makerange}{make\_range}
+
+    \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
+    \SetKwComment{Comment}{ // }{}
+
+    \Input{XQIFFT error estimation algorithm \estimatexqifft{$\exp$}}
+    \Output{Approximation of optimal exponent \exp}
+    \BlankLine
+
+    \tcp{Start at some range}
+    \minrange $\leftarrow$ -2.0\;
+    \maxrange $\leftarrow$ 2.0\;
+    \steps $\leftarrow$ 8\;
+    \BlankLine
+    \stepsize $\leftarrow$ (\maxrange $-$ \minrange) $/$ \steps\;
+    \exps{\steps} $\leftarrow$ \makerange{\minrange, \maxrange, \stepsize}\;
+    \BlankLine
+
+    \While{$\lnot$\quit} {
+        \For(\ \ // All iterations can be done in parallel){$i\leftarrow 0$ \KwTo \steps} {
+            \errors{$i$} $\leftarrow$ \estimatexqifft{\exps{$i$}}\;
+        }
+        \BlankLine
+
+        \minidx $\leftarrow$ 0\;
+        \For{$i\leftarrow 1$ \KwTo \steps} {
+            \uIf{\exps{$i$} $<$ \exps{\minidx}} {
+                \minidx $\leftarrow$ $i$\;
+            }
+        }
+        \BlankLine
+
+        \uIf{\minidx $=$ $0$} {
+            \tcp{Lowest value is at the start, so optimum is lower than current range}
+            \minrange $\leftarrow$ \minrange $-$ (\stepsize\ $*$ (\steps $-$ 2))\;
+            \maxrange $\leftarrow$ \maxrange $-$ (\stepsize\ $*$ (\steps $-$ 2))\;
+        }
+        \uElseIf{\minidx $=$ \steps $-$ $1$} {
+            \tcp{Lowest value is at the end, so optimum is higher than current range}
+            \minrange $\leftarrow$ \minrange $+$ (\stepsize\ $*$ (\steps $-$ 2))\;
+            \maxrange $\leftarrow$ \maxrange $+$ (\stepsize\ $*$ (\steps $-$ 2))\;
+        }
+        \Else {
+            \tcp{Optimum is between $\minidx-1$ and $\minidx+1$}
+            \minrange $\leftarrow$ \exps{\minidx $-$ $1$}\;
+            \maxrange $\leftarrow$ \exps{\minidx $+$ $1$}\;
+            \stepsize $\leftarrow$ (\maxrange $-$ \minrange) $/$ \steps\;
+        }
+        \exps{\steps} $\leftarrow$ \makerange{\minrange, \maxrange, \stepsize}\;
+    }
+    \BlankLine
+
+    \Return \exps{\minidx}\;
+
+    \BlankLine
+    \caption{Iterative algorithm approximating optimal choice of $\epsilon$ to be used by XQIFFT}
+    \label{alg:optimize_xqifft}
+\end{algorithm*}%\DecMargin{0.5em}

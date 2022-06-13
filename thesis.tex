@@ -247,11 +247,11 @@ To calculate the closest note $N_O$ corresponding to a frequency $f$, we first c
 % \end{align*}
 Here, $\round{\ldots}$ denotes rounding to the nearest integer. By rounding, we find the closest note to $f$. Now we can calculate $N$ and $O$ as follows:
 \begin{align*}
-    N &= n_s \mod 12 \\
+    N &= n_s \bmod 12 \\
     O &= \floor{\frac{n_s}{12}}
     % O &= n_s / 12
 \end{align*}
-Note that we assume $a \mod b$ always return a number $c$ for which $0 \leq c < b$. Some programming languages allow the modulo operator to return a value $c$ for which $-b < c < b$, resulting in $-13 \mod 10 = -3$ instead of $-13 \mod 10 = 7$. Furthermore, when using a conversion to an integer instead of a floor, the octave number is rounded up when the note distance is negative.
+Note that we assume $a \bmod b$ always return a number $c$ for which $0 \leq c < b$. Some programming languages allow the modulo operator to return a value $c$ for which $-b < c < b$, resulting in $-13 \bmod 10 = -3$ instead of $-13 \bmod 10 = 7$. Furthermore, when using a conversion to an integer instead of a floor, the octave number is rounded up when the note distance is negative.
 
 In order to calculate the error $e$ (in cents) between the given frequency to the closest tuned note, we first calculate the tuned frequency $f_t$ of the closest note:
 \[ f_t = f_{C_0} * 2^{\frac{n_s}{12}} \]
@@ -456,14 +456,14 @@ Zero padding is relatively compute intensive form of interpolation~\cite{interpo
 \end{figure}
 
 
-\subsection{Quadratic interpolation}
+\subsection{Quadratic interpolation}  \label{sub:qifft}
 A less compute intensive method of interpolation is quadratic interpolation, also know as Quadratically Interpolated FFT (QIFFT)~\cite{interpolnozero}. Given a peak bin and its neighbors, QIFFT interpolates the actual peak location by fitting a parabola through these three points. The vertex of the fitted parabola is the interpolated peak location.
 
-The accuracy of interpolation can be improved by performing the interpolation on a logarithmically-weighted magnitude spectrum (LQIFFT). In other words, the error of interpolation is reduced if the logarithm of the bin power is used. Since a Gaussian curve is a parabola on a logarithmic scale, the interpolation is nearly perfect when using a Gaussian window function on a unweighted spectrum~\cite{interpolgaus}. It isn't perfect, as a true Gaussian window would need infinite long tails~\cite{gauswin}.
+The accuracy of interpolation can be improved by performing the interpolation on a logarithmically weighted magnitude spectrum (LQIFFT). In other words, the error of interpolation is reduced if the logarithm of the bin power is used. Since a Gaussian curve is a parabola on a logarithmic scale, the interpolation is nearly perfect when using a Gaussian window function on a unweighted spectrum~\cite{interpolgaus}. It isn't perfect, as a true Gaussian window would need infinite long tails~\cite{gauswin}.
 
-\textcolor{gray}{TODO: XQIFFT?}
+Using an exponentially weighted magnitude spectrum (XQIFFT) may further reduce the interpolation error~\cite{interpolnozero}. However, this requires carefully choosing the exponent with which to weight the bins, as some choices may increase error. As outlined in Section~\ref{sub:opt_xqfft}, we can iteratively approximate the optimal exponent. Note that the optimal value is specific to the exact pitch estimation strategy up to peak interpolation. For example, if the frame size, zero-padding factor or window function changes, the optimal exponent has to be approximated again. In Section~\ref{sub:exp:qifft}, we empirically derive the errors for the different interpolation methods. The exponent factor cannot be zero.
 
-To perform the interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin $b_j$ at index $j$. Using the magnitude of the peak $|b_j|$ and the magnitude of the neighboring bins $|b_{j - 1}|$ and $|b_{j + 1}|$, we define:
+To perform quadratic interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1}{2}]$, which is the offset in bins of the interpolated peak with respect to the peak bin $b_j$ at index $j$. Using the magnitude of the peak $|b_j|$ and the magnitude of the neighboring bins $|b_{j - 1}|$ and $|b_{j + 1}|$, we define:
 \begin{align*}
     \alpha &= w(|b_{j - 1}|) \\
     \beta  &= w(|b_{j}|) \\
@@ -471,6 +471,8 @@ To perform the interpolation, we calculate a value $p \in [-\frac{1}{2}, \frac{1
 \end{align*}
 Here, $w(x)$ is an arbitrary weighting function. In the case of LQIFFT:
 \[ w(x) = \ln{x} \]
+Or in the case of XQIFFT with exponent $\epsilon$:
+\[ w(x) = x^{\epsilon} \]
 Then, we can calculate $p$ as follows:
 \[ p = \frac{1}{2} \cdot \frac{\alpha - \gamma}{\alpha - 2\beta + \gamma} \]
 The weighted amplitude $a_i^w$ corresponding to the interpolated peak is:
@@ -479,6 +481,8 @@ The non-weighted interpolated amplitude is:
 \[ a_i = w^{-1}(a_i^w) \]
 Here, $w^{-1}(x)$ is the inverse of $w(x)$. In the case of LQIFFT:
 \[ w^{-1}(x) = e^{x} \]
+Or in the case of XQIFFT with exponent $\epsilon$:
+\[ w^{-1}(x) = x^{\frac{1}{\epsilon}} \]
 Given the bin number $j$ of the spectral peak location, the frequency $f_i$ corresponding to the interpolated peak is:
 \[ f_i = \Delta f_{bin} * (j + p) \]
 The Lagrange polynomial describing the interpolation parabola is defined as follows:
@@ -493,10 +497,10 @@ The Lagrange polynomial describing the interpolation parabola is defined as foll
 %          =\ & \alpha * \frac{x - j}       {-1} * \frac{x - (j + 1)} {-2} \\
 %          &+ \beta    * \frac{x - (j - 1)} {1}  * \frac{x - (j + 1)} {-1} \\
 %          &+ \gamma   * \frac{x - (j - 1)} {2}  * \frac{x - j}       {1} \\
-\\[-2mm]
-         =\ & \alpha * (j - x)              * \frac{x - j - 1} {-2} \\
-         &+ \beta    * (x - j + 1)          * (j + 1 - x) \\
-         &+ \gamma   * \frac{x - j + 1} {2} * (x - j) \\
+% \\[-2mm]
+%          =\ & \alpha * (j - x)              * \frac{x - j - 1} {-2} \\
+%          &+ \beta    * (x - j + 1)          * (j + 1 - x) \\
+%          &+ \gamma   * \frac{x - j + 1} {2} * (x - j) \\
 % \\[-2mm]
 %          =\ & \alpha * (j - x)                                     * (\frac{1}{2}j + \frac{1}{2} - \frac{1}{2}x) \\
 %          &+ \beta    * (x - j + 1)                                 * (j + 1 - x) \\
@@ -578,17 +582,14 @@ Digistring is divided into three main components, shown graphically in Figure~\r
 %
 The main task of the estimator abstraction is separating pitch estimation from the rest of Digistring, such that the pitch estimation algorithm can easily be replaced. The goal of a pitch estimation algorithm is to convert a frame of sampled audio data to some representation of the notes contained in the frame. Consequently, the interface for an estimator should be a frame of samples as input and note events as output. A note event consists of a note along with onset/offset information expressed as number of samples relative to the start of the frame. %Optionally, note events can also describe special occurrences such as transients.
 
-\textcolor{gray}{TODO: Two phases. Initialization phase and estimation phase. Perform as much as possible in the initialization phase to save computation time in estimation phase. This consequently minimizes latency.}
+Estimators are split up in two phases: the initialization phase and estimation phase. The goal of the initialization phase is alleviating as much work as possible from the estimation phase, which minimizes latency. Examples of initialization phase tasks are precomputing the window function, setting up zero-padding buffers and letting FFTW3 optimize the used FFT algorithms.
 
-\textcolor{gray}{TODO: Zero padding implemented in estimator, as estimator needs to control padding. Otherwise, it wouldn't know to only apply a window function to a part of the frame or think it is much longer than in reality. Because it only needs to extend the input buffer and zero the extended part once, it is done in the initialization phase.}
+When using zero-padding, apply the window function as if the input buffer wasn't zero-padded. In general, any modification to the input signal should never affect the zero-padding. Consequently, the padding only has to be zeroed in initialization phase, as it should never be overwritten.
 
 \textcolor{gray}{TODO? As discussed in Section~\ref{sec:fourier}, we don't perform absolute signal power estimation. Instead, all note amplitudes reported by an estimator are on an arbitrary scale. As a consequence, output modules need to keep track of the maximum reported amplitude to which a specific note's amplitude can be compared to.}
 
 \subsubsection{HighRes estimator}
 Details on HighRes estimator implementation.
-
-\subsubsection{Estimator graphics}
-Estimator can optionally define an Estimator graphics object, which holds information regarding the last pitch estimated frame. This information can be rendered using visualizers. Currently, we implemented four visualizers (add screenshots).
 
 
 \subsection{Sample getter}
@@ -598,7 +599,7 @@ Frame overlapping, as discussed in Section~\ref{sec:overlapping}, is implemented
 
 A simple overlap implementation would save a copy of the entire input buffer, see Figure~\ref{fig:overlapgraph} for a graphical overview of the algorithm. As we know the amount of overlap, or at least an upper bound in the non-blocking case, we can only copy over what we might need next frame. This saved us both time and space, as less data has to be stored and less data has to be copied over. This does however force the sample getter to never request more samples in subsequent "get sample" calls, and in turn, it prevents using a variable overlap strategy. Using our tool \texttt{memcpy\_speed}, we measured that the time to copy a big buffer is negligible compared to the processing time of a frame. Because of this, we opted to disable this optimization.%, but left the relevant code in Digistring.
 %
-\textcolor{gray}{TODO? Swap buffer optimization. Not implemented as it requires estimator to keep input buffer intact.}
+% \textcolor{gray}{TODO? Swap buffer optimization. Not implemented as it requires estimator to keep input buffer intact.}
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/overlap.png}
@@ -630,18 +631,28 @@ There is one small caveat with this algorithm in the polyphonic case. For instan
 Currently, we have implemented \textcolor{red}{TODO synths}. %For information about adding additional synths to Digistring, see Appendix~\ref{sec:add_to_digistring}.
 
 
-\subsection{Experimentation tools}
+\subsection{Optimize XQIFFT exponent}  \label{sub:opt_xqfft}
+As discussed in Section~\ref{sub:qifft}, when performing XQIFFT, we need to carefully choose the exponent with which to weight the bins. To test the error of XQIFFT for some exponent $\epsilon$, we generate many different sine waves and perform pitch estimation as we normally would. As we are transforming pure sines, we can simply pick the loudest bin as our estimated pitch. After finding this bin, we can XQIFFT the true peak location and return the found pitch. Since we know the original frequency of the generated sine, we can calculate a measure of error. For instance, we can minimize the mean error over all frequencies or minimize the maximum error. We chose to use the mean squared error for a combination of the two. See Algorithm~\ref{alg:xqifft_error} for an example of such an algorithm. \textcolor{gray}{Here, we generate the sines exponentially.}
+\input{pseudo_code/xqifft_error.pc}
+
+\textcolor{gray}{TODO: The error may vary slightly depending on the starting phase of the sine. To circumvent this, we generate multiple sine waves of different phase for every frequency.}
+
+As error increases for exponents further away from the optimum, we can iteratively approximate the optimal exponent. See Algorithm~\ref{alg:optimize_xqifft} for a pseudo-code implementation of such an algorithm. Here, we start our search at some arbitrary range. Then, we calculate the error of some points in this range. These points can be calculated in parallel for an enormous speed-up. If the minimum value is at either end of the range, we have to search further in that direction. We always overlap two points with neighboring ranges, in case the end of the range is the minimum value for that search resolution. Otherwise, we update the search range to the two values surrounding the minimum point and repeat the optimization process.
+\input{pseudo_code/optimize_xqifft.pc}
+
+
+\subsection{Experimentation and estimation feedback tools}  \label{sub:tools}
 \textcolor{gray}{TODO: Experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures. Ambiguity of performance measure (all are both good and bad).}
 
-\textcolor{gray}{JSON output.}
+\textcolor{gray}{JSON output and \texttt{generate\_report} tool.}
 
 \textcolor{gray}{Performance (speed) measuring.}
+
+\textcolor{gray}{Estimator graphics.} Estimator can optionally define an Estimator graphics object, which holds information regarding the last pitch estimated frame. This information can be rendered using visualizers. Currently, we implemented four visualizers (add screenshots).
 
 \textcolor{gray}{Slowdown mode.}
 
 \textcolor{gray}{Synthesizer, especially combined with stereo split input monitoring/synthesizer output. MIDI output version of Digistring.}
-
-\textcolor{gray}{\texttt{generate\_report} tool.}
 
 
 % \subsection{Playback latency}  \label{sub:playback_latency}
@@ -653,6 +664,10 @@ Currently, we have implemented \textcolor{red}{TODO synths}. %For information ab
 
 \section{Experiments}  \label{sec:exp}
 \textcolor{gray}{Note that the parameters were empirically optimized with informal experiments. Datasets. Actual experiments.}
+
+
+\subsection{QIFFT errors}  \label{sub:exp:qifft}
+\textcolor{gray}{Errors of the different interpolation methods.}
 
 
 
