@@ -21,9 +21,9 @@
     \BlankLine
 
     \tcp{Start at some range}
-    \minrange $\leftarrow$ -2.0\;
-    \maxrange $\leftarrow$ 2.0\;
-    \steps $\leftarrow$ 8\;
+    \minrange $\leftarrow$ -10.0\;
+    \maxrange $\leftarrow$ 10.0\;
+    \steps $\leftarrow$ 8\  \Comment*[l]{Optimally matches the number of CPU cores}
     \BlankLine
     \stepsize $\leftarrow$ (\maxrange $-$ \minrange) $/$ \steps\;
     \exps{\steps} $\leftarrow$ \makerange{\minrange, \maxrange, \stepsize}\;

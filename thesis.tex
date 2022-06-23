@@ -69,7 +69,7 @@
 \section{Introduction}
 Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine which notes are played in a given signal.
 
-Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time (we cannot peak-ahead) and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
+Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time \textcolor{gray}{(we cannot peak-ahead)} and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
 
 If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
 
@@ -399,7 +399,7 @@ The critical latency depends, among other things, on the speed with which notes 
 
 There is a limit on how fast we can estimate the pitch of a played note. For instance, when we consider transients noise, we have to wait for the transient to pass before we can gather samples containing the note. Then, we need enough samples such that the lowest bin of the DFT doesn't exceed the frequency of the lowest note. In the case of \note{E}{2}, which is 82.407 Hz, we would need a minimum frame length of $ \frac{1}{82.407} * 1000 = 12.135 $ milliseconds. Due to spectral leakage, using such small frame lengths is not feasible. However, as outlined in Section~\ref{sub:waveform_packet}, we can translate this idea to the time domain. In practice, this would result in a minimum latency of 14 to 15 milliseconds.
 
-In order to assess what we can reasonably expect from our system, we measured the latency of a commercial guitar synthesizer solution. This is described in depth in Appendix~\ref{sec:ax100}. Here, we found the Axon AX 100 MKII at worst has a latency of 15 milliseconds when it is able to guess the note "the first try". Otherwise, the latency may reach up to 40 milliseconds.
+In order to assess what we can reasonably expect from our system, we measured the latency of a commercial guitar synthesizer solution. This is described in depth in Appendix~\ref{sec:ax100}. Here, we found the Axon AX 100 MKII at best has a latency of 15 milliseconds when it is able to guess the note "the first try". Otherwise, the latency may reach up to 40 milliseconds.
 
 \textcolor{gray}{TODO: Note on unaccounted latencies (audio driver/hardware latencies).}
 A careful reader may have noticed we actually discussed two different latencies. We mostly reason about the latency of our pitch estimation system. However, when reasoning about the critical latency, latencies from the audio driver and hardware as discussed in Section~\ref{sub:computer_audio} do matter. \textcolor{gray}{TODO: Estimate on these latencies. Estimate of latency when running Digistring's algorithms on specialized hardware}.
@@ -552,8 +552,8 @@ Instead of selecting a single peak, we can look for a group of peaks which form 
 \input{pseudo_code/highres_overview.pc}
 
 
-\subsection{Tuned Fourier transforms}
-\textcolor{gray}{12 Fouriers for each note and it's overtones.}
+% \subsection{Tuned Fourier transforms}
+% \textcolor{gray}{12 Fouriers for each note and it's overtones.}
 
 
 
@@ -580,7 +580,7 @@ Digistring is divided into three main components, shown graphically in Figure~\r
 \subsection{Estimator}
 % \textcolor{gray}{Implementation details about estimator and estimator graphics. As an optimization, we share the input buffer of the estimator with the sample getter. This prevents a copy of the full frame every cycle.}
 %
-The main task of the estimator abstraction is separating pitch estimation from the rest of Digistring, such that the pitch estimation algorithm can easily be replaced. The goal of a pitch estimation algorithm is to convert a frame of sampled audio data to some representation of the notes contained in the frame. Consequently, the interface for an estimator should be a frame of samples as input and note events as output. A note event consists of a note along with onset/offset information expressed as number of samples relative to the start of the frame. %Optionally, note events can also describe special occurrences such as transients.
+The main task of the estimator abstraction is separating pitch estimation from the rest of Digistring, such that the pitch estimation algorithm can easily be replaced. The goal of a pitch estimation algorithm is to convert a frame of sampled audio data to some representation of the notes contained in the frame. Consequently, the interface for an estimator should be a frame of samples as input and note events as output. A note event consists of a note along with onset/offset information expressed as number of samples relative to the start of the frame. Optionally, Estimators can set a confidence level for each estimated note events.
 
 Estimators are split up in two phases: the initialization phase and estimation phase. The goal of the initialization phase is alleviating as much work as possible from the estimation phase, which minimizes latency. Examples of initialization phase tasks are precomputing the window function, setting up zero-padding buffers and letting FFTW3 optimize the used FFT algorithms.
 
@@ -592,7 +592,7 @@ When using zero-padding, apply the window function as if the input buffer wasn't
 Details on HighRes estimator implementation.
 
 
-\subsection{Sample getter}
+\subsection{Sample getter}  \label{sub:samplegetter}
 As mentioned in Section~\ref{sub:computer_audio}, audio samples can be represented in different formats. Floating point samples have many advantages over integer of fixed point samples~\cite{dspfloat}. Most audio interfaces and audio file formats support 24 bit integer samples or 32 bit floating point samples as the best quality samples. Note that 24 bit integer samples can be converted lossless to 32 bit floating point samples. One could convert to 64 bit floating point samples, which slightly reduces the accumulated floating point rounding errors during digital signal processing. However, the accumulated error is negligible and it would require us to always convert any input samples. Using our tool \texttt{float\_vs\_double}, we found no difference in normal sample processing speed between 32 bit and 64 bit floating point numbers, but this may differ per CPU architecture. When using vector instruction sets such as AVX, the amount or parallelism is limited by the number of bits in the vector registers. As FFTW3 uses these vector instructions, 32 bit floating point number are faster. This can be verified using our \texttt{float\_vs\_double\_fftw3} tool. Given these arguments, we decided to use 32 bit floating point samples for all our samples processing in Digistring.
 
 Frame overlapping, as discussed in Section~\ref{sec:overlapping}, is implemented in the sample getter. This way, the pitch estimator doesn't need to know about overlapping. Furthermore, by implementing overlapping in the base class, any newly added sample getter will automatically be able to overlap. There are two different overlapping strategies. The first overlaps two subsequent frames by a constant factor between 0 and 1. The number of samples to overlap is the frame size multiplied by this factor. We clamp the resulting number between 1 and frame size - 1 to assure we always overlap at least one sample or at least get one new sample. The second overlapping strategy is only applicable when reading samples from an audio device. Here, the number of overlapping samples is determined by subtracting the number of samples ready to be read from the audio driver from the frame size. The rest of the frame is filled with samples from the previous frame. To limit the amount of overlap, we allow for a minimum and maximum overlap factor to be set. In live usage, the minimum overlap factor should never be met, as it implies that the estimation system can't keep up with the incoming samples from the audio driver. In Digistring, we refer to this second overlapping strategy as non-blocking overlap, as we try to overlap such that we won't block on retrieving samples from the audio driver.
@@ -616,7 +616,8 @@ We have implemented four different sample getters in Digistring. The most import
 
 
 \subsection{Real time sound synthesis}
-To verify if the results of an estimator are musically sound, we implemented a synthesizer interface in Digistring. Given a list of note events, a sample buffer and its size, the synthesizer will fill the buffer with samples such that, when played back, the resulting sound correctly represents the note events. Generating the samples has to be done carefully, as discontinuities in the samples cause audible plops in the resulting audio.% This means we cannot generate sound waves in the buffer exactly where the note events describe them, as note events likely no not align with the wave's periods.
+\textcolor{gray}{TODO: Rewrite. }
+To verify if the results of an estimator are musically sound, we implemented a synthesizer interface in Digistring. Given a list of note events, a sample buffer and its size, the synthesizer will fill the buffer with samples such that, when played back, the resulting sound correctly represents the note events. Generating the samples has to be done carefully, as discontinuities generated samples cause audible plops in the resulting audio.% This means we cannot generate sound waves in the buffer exactly where the note events describe them, as note events likely no not align with the wave's periods.
 
 There are two cases where discontinuities may arise when synthesizing sine waves. The first is within a buffer. If we for example want to generate a one hertz sine wave for 1.25 seconds, the wave would end at its highest point and go back to silence the next sample, causing a large discontinuity. We can circumvent this by altering sine wave in such a way that it does reach a zero crossing before stopping. For instance, we can keep generating samples until the waveform reaches a zero crossing, which causes temporal distortion \textcolor{gray}{(distortions in time)} in the synthesized sound. In the case of sine waves, this quantizes note lengths to half the frequency, as sine waves have two equally spaced zero crossings. We can also stop the sine wave early if the previous zero crossing is closer than the next. Using this technique, the worst case temporal distortion on a guitar would be 3 milliseconds, as the \note{E}{2} has a zero crossing every $ \frac{1000}{82.41} / 2 \approx 6 $ milliseconds. We can also alter the end of the sine wave to force the end to zero, by either amplitude modulating the end of the wave or by adding samples which quickly go back to zero. These method causes spectral distortions \textcolor{gray}{(distortions in frequency)}.
 
@@ -632,23 +633,49 @@ Currently, we have implemented \textcolor{red}{TODO synths}. %For information ab
 
 
 \subsection{Optimize XQIFFT exponent}  \label{sub:opt_xqfft}
-As discussed in Section~\ref{sub:qifft}, when performing XQIFFT, we need to carefully choose the exponent with which to weight the bins. To test the error of XQIFFT for some exponent $\epsilon$, we generate many different sine waves and perform pitch estimation as we normally would. As we are transforming pure sines, we can simply pick the loudest bin as our estimated pitch. After finding this bin, we can XQIFFT the true peak location and return the found pitch. Since we know the original frequency of the generated sine, we can calculate a measure of error. For instance, we can minimize the mean error over all frequencies or minimize the maximum error. We chose to use the mean squared error for a combination of the two. See Algorithm~\ref{alg:xqifft_error} for an example of such an algorithm. \textcolor{gray}{Here, we generate the sines exponentially.}
+As discussed in Section~\ref{sub:qifft}, when performing XQIFFT, we need to carefully choose the exponent with which to weight the bins. To test the error of XQIFFT for some exponent $\epsilon$, we generate many different sine waves and perform pitch estimation as we normally would. As we are transforming pure sines, we can simply pick the loudest bin as our estimated pitch. After finding this bin, we can XQIFFT the true peak location and return the found pitch. Since we know the original frequency of the generated sine, we can calculate a measure of error. For instance, we can minimize the mean error over all frequencies or minimize the maximum error. We chose to use the mean squared error for a combination of the two. See Algorithm~\ref{alg:xqifft_error} for an example of such an algorithm.
 \input{pseudo_code/xqifft_error.pc}
 
-\textcolor{gray}{TODO: The error may vary slightly depending on the starting phase of the sine. To circumvent this, we generate multiple sine waves of different phase for every frequency.}
+On line~\ref{alg:xqifft_error:freq}, we generate a sine for every cent in an octave starting at a low frequency. We chose this method because it focuses on lower frequencies, which need the most resolution. However, through some informal tests, we found that the exact series of frequencies doesn't influence the results significantly if enough sines are generated. Moreover, the error may vary slightly depending on the starting phase of the sine. To prevent a bias, we generate multiple sine waves of different phase for every frequency, causing the phase error of average out.
 
 As error increases for exponents further away from the optimum, we can iteratively approximate the optimal exponent. See Algorithm~\ref{alg:optimize_xqifft} for a pseudo-code implementation of such an algorithm. Here, we start our search at some arbitrary range. Then, we calculate the error of some points in this range. These points can be calculated in parallel for an enormous speed-up. If the minimum value is at either end of the range, we have to search further in that direction. We always overlap two points with neighboring ranges, in case the end of the range is the minimum value for that search resolution. Otherwise, we update the search range to the two values surrounding the minimum point and repeat the optimization process.
 \input{pseudo_code/optimize_xqifft.pc}
 
 
 \subsection{Experimentation and estimation feedback tools}  \label{sub:tools}
-\textcolor{gray}{TODO: Experimentation is difficult... Many ways to report note estimations and all datasets have different annotation standard (solved using intermediate representation). Automatically calculates commonly used performance measures. Ambiguity of performance measure (all are both good and bad).}
+As mentioned in the intro of this section, good experimentation and estimation feedback tools are necessary in order to build a well performing real-time pitch estimation system.
 
-\textcolor{gray}{JSON output and \texttt{generate\_report} tool.}
+Experiments in AMT rely on datasets containing sound files accompanied with annotation files describing the notes present in the sound files. This means that in order to experiment on a pitch estimation system, we need to be able to feed the sound files to the pitch estimation system and compare its results to the annotations. The former is possible through the \texttt{audio\_in} sample getter. To allow for the latter, Digistring can write its estimations results to a JSON formatted file.
 
-\textcolor{gray}{Performance (speed) measuring.}
+To compare the Digistring results to annotations, we created a Python tool called \textit{generate report}. Given a Digistring output file and the corresponding dataset annotation, it can calculate many different performance measures. Furthermore, it can generate plots which visualize the annotations and pitch estimation results in a MIDI piano roll like fashion; see Figure~\ref{fig:pianoroll} for an example.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/generate_report.png}
+    \caption{\textcolor{gray}{TODO: Better image.} TODO: Caption.}
+    \label{fig:pianoroll}
+\end{figure}
+Unfortunately, every dataset uses its own annotation standard. Because of this, we parse the annotation file into an intermediate representation. This allows us to use the tool for different datasets by solely implementing a parser for the annotation standard. Furthermore, the Digistring output is also parsed into this intermediate representation, which means this tool can also be used with different estimation systems by writing a parser for the estimation system's output. The different performance measures are then calculated from this intermediate representation.
 
-\textcolor{gray}{Estimator graphics.} Estimator can optionally define an Estimator graphics object, which holds information regarding the last pitch estimated frame. This information can be rendered using visualizers. Currently, we implemented four visualizers (add screenshots).
+As we focus on real-time pitch estimation, we need to be able to measure the run-time performance of different parts of the system. This is possible through our performance measuring class, which allows us to set labelled measurement points in the code between which elapsed time is measured. The measured times are written to a file which can be interpreted by our \textit{performance plot} tool, which can visually show the distribution of run-times for each time point; see Figure~\ref{TODO} for an example of such a plot. Using this information, we can see which processes introduce the most latency to our pitch estimation system.
+
+In order to visualize the pitch estimation process, we allow Estimators to define an EstimatorGraphics object, which holds information regarding the last processed frame. This information can be rendered using visualizers. For instance, we can render the spectrum as a spectrogram or waterfall plot, or plot the raw input waveform; see Figure~\ref{fig:screens} for examples.
+\begin{figure}[h]
+    \centering
+    % \begin{subfigure}{\linewidth}
+        \includegraphics[width=\linewidth]{fig/digi_spec.png}
+    %     \caption{}
+    % \end{subfigure}
+    % \begin{subfigure}{\linewidth}
+        \includegraphics[width=\linewidth]{fig/digi_water.png}
+    %     \caption{}
+    % \end{subfigure}
+    % \begin{subfigure}{\linewidth}
+        \includegraphics[width=\linewidth]{fig/digi_wave.png}
+    %     \caption{}
+    % \end{subfigure}
+    \caption{TODO: Caption}
+    \label{fig:screens}
+\end{figure}
 
 \textcolor{gray}{Slowdown mode.}
 
@@ -670,6 +697,18 @@ As error increases for exponents further away from the optimum, we can iterative
 \textcolor{gray}{Errors of the different interpolation methods.}
 
 
+\subsection{Fourier frame size limit}
+\textcolor{gray}{TODO: Better section name. Lowest frame size we can discern two low pitched sines.}
+
+
+\subsection{Pitch estimation speed}
+\textcolor{gray}{Graphs of pitch estimation speed distribution.}
+
+
+\subsection{Pitch estimation accuracy}
+\textcolor{gray}{...}
+
+
 
 \section{Conclusions}
 \textcolor{gray}{What we did in this thesis. Reflection on the performance of the system. Final reference to the source code.}
@@ -689,7 +728,11 @@ As error increases for exponents further away from the optimum, we can iterative
 
 \appendix
 \section{Measuring the latency of the AXON AX 100 mkII}  \label{sec:ax100}
-\textcolor{gray}{Lekker meten en weten.}
+To compare our work to commercial guitar to MIDI solutions, we performed some experiments on the Axon AX 100 mkII. Many thanks to Elgar van der Zande for letting us use his lab equipment and helping with the experiments.
+
+For our first experiment, we tried to trigger pitch estimation by sending a pure sine wave to the Axon using a signal generator. Surprisingly, this lead to an error on the Axon. Changing the type of waveform or frequency had no effect. Only after generating at least two overtones does the Axon produce a pitch estimation. This shows us that the existence of overtones is very important to the Axon's pitch estimation system.
+
+Next...
 
 
 

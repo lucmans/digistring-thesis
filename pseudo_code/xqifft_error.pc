@@ -30,7 +30,7 @@
     \BlankLine
 
     \tcp{Repetitions per frequency}
-    \repsfreq $\leftarrow$ 5\;
+    \repsfreq $\leftarrow$ 8\;
     \BlankLine
 
     \tcp{Generate list of frequencies to test}
