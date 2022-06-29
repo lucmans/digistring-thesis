@@ -1,4 +1,3 @@
-
 % \documentclass[10pt]{article}
 \documentclass[a4paper,10pt,twocolumn]{article}
 \setlength\columnsep{6mm}
@@ -219,7 +218,7 @@ Using the above information, we can translate frequencies into scientific note n
         \end{tabular}
     \end{center}
     \hfill
-    \caption{The number corresponding to each note name}
+    \caption{The number corresponding to each note name.}
     \label{tab:notenames}
 \end{table}
 In order to make calculations easier, we use \note{C}{0} as a tuning note instead of \note{A}{4}. We can calculate the frequency of \note{C}{0} using the fact that \note{C}{0} is 57 semitones lower than \note{A}{4}:
@@ -310,7 +309,7 @@ In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect 
         5 & 1569.753 & $G_6$    & 1567.982 &  1.955 \\
         6 & 1831.379 & $A^\#_6$ & 1864.655 &  -31.174
     \end{tabular}
-    \caption{Example of overtone series from \note{C}{4} and the errors compared to the closest note}
+    \caption{Example of overtone series from \note{C}{4} and the errors compared to the closest note.}
     \label{tab:overseries}
 \end{table}
 
@@ -354,7 +353,7 @@ TODO: Overtone overlap and polyphonic difficulty.}
         5 & 979.989
     \end{tabular}
     \hfill
-    \caption{Overtones of C, E and G}
+    \caption{Overtones of C, E and G.}
     \label{tab:overtones}
 \end{table}
 \begin{table}[h]
@@ -368,7 +367,7 @@ TODO: Overtone overlap and polyphonic difficulty.}
         $f^{C_3}_4$ & 654.064 & \multirow{2}{*}{5.191} \\
         $f^{E_3}_3$ & 659.255 &
     \end{tabular}
-    \caption{Colliding overtones}
+    \caption{Colliding overtones.}
     \label{tab:diff}
 \end{table}
 
@@ -395,7 +394,7 @@ Note that our real-time constraint only considers pitch estimation latency. If w
 Even though the critical latency is subjective, it is the factor determining if a real-time pitch estimation system is usable in musical context. In order to determine the critical latency empirically, we created a tool called \textit{delayed playback}, which plays back recorded audio with an arbitrary latency. Using \textit{delayed playback}, we found a latency of \textcolor{red}{TODO} milliseconds is a reasonable latency at which we can still comfortably play many songs. \textit{Delayed playback} can also be used to verify if a real-time constraint chosen by someone else is reasonable by your own standards.% The tool is described in depth in Section~\ref{sub:playback_latency}.% Note that the reported latency from does not include the latencies introduced by the audio drivers and hardware discussed in Section~\ref{sub:computer_audio}.
 
 % \textcolor{gray}{TODO: Rewrite paragraph, as playing faster is easier due to relying more on muscle memory instead of listening to yourself.}
-The critical latency depends, among other things, on the speed with which notes are played. For instance, let's assume a latency of 50 milliseconds. When playing a slow song consisting of quarter notes at 120 BPM, resulting in 2 notes per second, the latency is only a tenth of the note duration. However, when playing a fast solo consisting of sixteenth notes at 210 BPM, resulting in 12 notes per second, the latency is 70\% of the note duration. This means you hear more of the previous note than the current note for the duration with which the current note is played, which makes playing at fast speeds extra difficult. % This tricks the brain in such a way that it prevents you from staying on beat.
+% The critical latency depends, among other things, on the speed with which notes are played. For instance, let's assume a latency of 50 milliseconds. When playing a slow song consisting of quarter notes at 120 BPM, resulting in 2 notes per second, the latency is only a tenth of the note duration. However, when playing a fast solo consisting of sixteenth notes at 210 BPM, resulting in 12 notes per second, the latency is 70\% of the note duration. This means you hear more of the previous note than the current note for the duration with which the current note is played, which makes playing at fast speeds extra difficult. % This tricks the brain in such a way that it prevents you from staying on beat.
 
 There is a limit on how fast we can estimate the pitch of a played note. For instance, when we consider transients noise, we have to wait for the transient to pass before we can gather samples containing the note. Then, we need enough samples such that the lowest bin of the DFT doesn't exceed the frequency of the lowest note. In the case of \note{E}{2}, which is 82.407 Hz, we would need a minimum frame length of $ \frac{1}{82.407} * 1000 = 12.135 $ milliseconds. Due to spectral leakage, using such small frame lengths is not feasible. However, as outlined in Section~\ref{sub:waveform_packet}, we can translate this idea to the time domain. In practice, this would result in a minimum latency of 14 to 15 milliseconds.
 
@@ -588,8 +587,7 @@ When using zero-padding, apply the window function as if the input buffer wasn't
 
 \textcolor{gray}{TODO? As discussed in Section~\ref{sec:fourier}, we don't perform absolute signal power estimation. Instead, all note amplitudes reported by an estimator are on an arbitrary scale. As a consequence, output modules need to keep track of the maximum reported amplitude to which a specific note's amplitude can be compared to.}
 
-\subsubsection{HighRes estimator}
-Details on HighRes estimator implementation.
+The estimator at the center of this thesis is the high resolution estimator, which we refer to as the HighRes estimator. Its name stems from the general strategy it uses to perform pitch estimation, which is obtained an as high resolution frequency domain as possible to approximate the continuous spectrum with. \textcolor{red}{Implementation details.}
 
 
 \subsection{Sample getter}  \label{sub:samplegetter}
@@ -616,13 +614,13 @@ We have implemented four different sample getters in Digistring. The most import
 
 
 \subsection{Real time sound synthesis}
-\textcolor{gray}{TODO: Rewrite. }
 To verify if the results of an estimator are musically sound, we implemented a synthesizer interface in Digistring. Given a list of note events, a sample buffer and its size, the synthesizer will fill the buffer with samples such that, when played back, the resulting sound correctly represents the note events. Generating the samples has to be done carefully, as discontinuities generated samples cause audible plops in the resulting audio.% This means we cannot generate sound waves in the buffer exactly where the note events describe them, as note events likely no not align with the wave's periods.
 
-There are two cases where discontinuities may arise when synthesizing sine waves. The first is within a buffer. If we for example want to generate a one hertz sine wave for 1.25 seconds, the wave would end at its highest point and go back to silence the next sample, causing a large discontinuity. We can circumvent this by altering sine wave in such a way that it does reach a zero crossing before stopping. For instance, we can keep generating samples until the waveform reaches a zero crossing, which causes temporal distortion \textcolor{gray}{(distortions in time)} in the synthesized sound. In the case of sine waves, this quantizes note lengths to half the frequency, as sine waves have two equally spaced zero crossings. We can also stop the sine wave early if the previous zero crossing is closer than the next. Using this technique, the worst case temporal distortion on a guitar would be 3 milliseconds, as the \note{E}{2} has a zero crossing every $ \frac{1000}{82.41} / 2 \approx 6 $ milliseconds. We can also alter the end of the sine wave to force the end to zero, by either amplitude modulating the end of the wave or by adding samples which quickly go back to zero. These method causes spectral distortions \textcolor{gray}{(distortions in frequency)}.
+There are two cases where discontinuities may arise when synthesizing sine waves. The first is within a buffer. If we for example want to generate a one hertz sine wave for 1.25 seconds, the wave would end at its highest point and go back to silence the next sample, causing a large discontinuity. We can circumvent this by altering sine wave in such a way that it does reach a zero crossing before stopping. For instance, we can keep generating samples until the waveform reaches a zero crossing, which causes temporal distortion \textcolor{gray}{(distortions in time)} in the synthesized sound. In the case of sine waves, this quantizes note lengths to half the frequency, as sine waves have two equally spaced zero crossings. We can also stop the sine wave early if the previous zero crossing is closer than the next. Using this technique, the worst case temporal distortion on a guitar would be 3 milliseconds, as the \note{E}{2} has a zero crossing every $ \frac{1000}{82.41} / 2 \approx 6 $ milliseconds. We can also alter the end of the sine wave to force the end to zero, by either amplitude modulating the end of the wave or by adding samples which quickly go back to zero. These methods causes spectral distortions \textcolor{gray}{(distortions in frequency)}.
 
 The second case where discontinuities may arise is when a note is not finished at the end of a frame. If the note ended and the next frame contains silence at the start, the signal should go back to 0 as described in the previous paragraph. If the note sustains or another note is played at the start of the next frame, the synthesizer has to continue from this point. Because of this, a synthesizer needs some inter-frame communication.
 
+\textcolor{gray}{TODO: Rewrite. }
 Our sine synthesizer algorithm starts by zeroing the synth buffer. We first try to zero notes which were not zero at the end of the previous frame. Then, we iterate over every note event and add the generated sine wave samples corresponding to the note event to the synth buffer in the right place. We make sure both ends of the note event samples are at zero by temporally shifting the offset of the note. We only shift the offset, as the onset is more important for conveying rhythm. For every note event that could not reach zero at the end of the synth buffer, we save the note and the phase corresponding to the last generated sample. By saving the phase of the last sample of a note, we can continue at the correct position in the corresponding sine wave in the next frame. This algorithm will always ensure continuity, even if there is polyphony in the note events.
 
 There is one small caveat with this algorithm in the polyphonic case. For instance, if we generate two overlapping sine waves of the same frequency, but one sine temporally shifted half a wavelength, the two waves will cancel each other out. If they are generated a full wavelength apart, they will amplify each other maximally and might cause clipping. Mixing multiple audio channels is out of the scope of this thesis, so we simply ignore this problem. In practice, these cases rarely show up.
@@ -673,7 +671,7 @@ In order to visualize the pitch estimation process, we allow Estimators to defin
         \includegraphics[width=\linewidth]{fig/digi_wave.png}
     %     \caption{}
     % \end{subfigure}
-    \caption{TODO: Caption}
+    \caption{TODO: Caption.}
     \label{fig:screens}
 \end{figure}
 
@@ -730,14 +728,58 @@ In order to visualize the pitch estimation process, we allow Estimators to defin
 \section{Measuring the latency of the AXON AX 100 mkII}  \label{sec:ax100}
 To compare our work to commercial guitar to MIDI solutions, we performed some experiments on the Axon AX 100 mkII. Many thanks to Elgar van der Zande for letting us use his lab equipment and helping with the experiments.
 
-For our first experiment, we tried to trigger pitch estimation by sending a pure sine wave to the Axon using a signal generator. Surprisingly, this lead to an error on the Axon. Changing the type of waveform or frequency had no effect. Only after generating at least two overtones does the Axon produce a pitch estimation. This shows us that the existence of overtones is very important to the Axon's pitch estimation system.
+For our first experiment, we tried to trigger pitch estimation by sending a pure sine wave to the Axon using a signal generator. Surprisingly, this led to an error on the Axon. Changing the type of waveform or frequency had no effect. Only after generating at least two overtones does the Axon produce a pitch estimation. This shows us that the existence of overtones is very important to the Axon's pitch estimation system.
 
-Next...
+Next, we set out to determine the pitch estimation latency of the Axon. To do so, we connected both the guitar input to and MIDI output from the Axon to an oscilloscope. We also connected the audio output of the Axon to measure the synthesizer latency. %For the MIDI output, we could simply connect a probe to the correct pin on the 5-pin DIN connector, however, 
+Then, if we set the oscilloscope to trigger on any MIDI signal change, we can take the difference between that time point and the start of the guitar signal. An example of the images the oscilloscope produces can be seen in Figure~\ref{fig:osc_overview}.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/osc_1.png}
+    \caption{Example of measurement on an oscilloscope. Here, the blue line is the analog guitar input, the purple line is the MIDI output and the yellow line is the synthesized audio output. In this image, we played an \note{E}{2}. The blue triangle on top shows us where the oscilloscope triggered on the MIDI signal. Then, using the distance between this and the start of the blue waveform, we can determine the pitch estimation latency.}
+    \label{fig:osc_overview}
+\end{figure}
+
+For both E strings and the G string, we measured the latency while playing the open string, the first fret and the twelfth fret. Every note was played using a plectrum at the normal picking position. For the open string and first fret measurements, we also picked each note at the twelfth fret and sixth fret. Every measurement was performed three times. The measurements are summerized in Table~\ref{tab:osc_results}. Here, we can see the Axon has significantly higher latencies on low pitched notes. This is exacerbated when strumming the note further up the neck. Moreover, during our experimentation, we noticed that the Axon either had a quick estimation between 11 and 15 milliseconds, or a slow estimation between 25-40 milliseconds. This may indicate there are two estimation algorithms at work. When the quick one is not confident enough, the result of the slower algorithm is awaited.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c|ccc}
+        String-fret & normal & 12th & 6th \\
+        \hline
+        E0  & 15.8 & 34.1 - 38.8 & 30.5 - 38.9 \\
+        E1  & 14.8 & 30.9 - 37.2 & 29.3 \\
+        E12 & 12.9 - 13.6 & - & - \\
+        G0  & 12.5 & 15.1 & 14.6 \\
+        G1  & 13.3 & 14.6 & 13.8 \\
+        G12 & 12.4 & - & - \\
+        e0  & 11.0 & 11.1 & 12.0 \\
+        e1  & 11.9 - 12.5 & 11.6 - 12.4 & 11.0 - 12.5 \\
+        e12 & 12.2 & - & -
+    \end{tabular}
+    \caption{Latency between receiving a guitar signal and outputting a MIDI signal in milliseconds. E refers to the low pitched E string and e refers to the high pitched E string.}
+    \label{tab:osc_results}
+\end{table}
+
+Note that latencies ascertained from the oscilloscope images might not reflect the actual latency. There might be a small latency between strumming a note and generating a waveform. For instance, at the start of strumming a note, the string is only displaced, not resulting in sound. Then, when the pick slides off the string and the string is released to vibrate freely, the resulting waveform can start to exist.
+
+Lastly, we checked the pitch estimation latency when feeding the Axon pure sine signals from a signal generator. Here, we feed the Axon with a signal consisting of a sine wave along with three overtones on the input for the low pitched E string. See Table~\ref{tab:osc_siggen} for an overview of the results. The latencies for 65.4 Hz and 440 Hz were surprisingly high, where the two frequencies close to E0 (\note{E}{2} in scientific notation) performed similar to the guitar signal. This may indicate that the Axon only outputs note estimations that are generally in range of a string, or it has to be very sure of the estimation result.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c|c}
+        $f_0$ & latency (ms) \\
+        \hline
+        65.4 & 48.4 \\
+        82   & 15.68 \\
+        82.4 & 15.8 \\
+        440  & 74.8
+    \end{tabular}
+    \caption{Latency of pitch estimation when using a generated sine signal with additional 3 overtones.}
+    \label{tab:osc_siggen}
+\end{table}
 
 
 
 \section{Effect of different window functions}  \label{sec:windows}
-\textcolor{gray}{Plots met effect van verschillende window functions. Rectangular narrowest main lobe and least ENBW. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage (optimal filter). Parzen window (and b-spline windows per extension) have much space between lobes (lobe density.}
+\textcolor{gray}{Plots met effect van verschillende window functions. Rectangular narrowest main lobe and least ENBW. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage (optimal filter). Parzen window (and b-spline windows per extension) have much space between lobes (lobe density).}
 % for ENBW of different windows: https://www.gaussianwaves.com/2020/09/equivalent-noise-bandwidth-enbw-of-window-functions/
 
 \begin{figure}[h]
