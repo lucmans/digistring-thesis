@@ -10,6 +10,7 @@
     \SetKwData{amp}{amp}
     \SetKwData{overtoneerror}{overtone\_error}
     \SetKwData{maxidx}{max\_idx}
+    \SetKwData{minovertones}{min\_overtones}
 
     \SetKwFunction{applywindow}{apply\_window\_function}
     \SetKwFunction{applyfourier}{fourier\_transform}
@@ -53,9 +54,15 @@
     }
     \BlankLine
 
+    \tcp{Optional filtering}
+    \uIf{\nharmonics{i} $<$ \minovertones} {
+        \Return\;
+    }
+    \BlankLine
+
     Return \ipeaks{\maxidx}\;
 
     \BlankLine
-    \caption{Note selection algorithm which selects the peak with the most overtones}
+    \caption{Note selection algorithm which selects the peak with the most overtones.}
     \label{alg:noteselect}
 \end{algorithm*}%\DecMargin{0.5em}

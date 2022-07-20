@@ -26,6 +26,9 @@
 \usepackage{dblfloatfix}
 \usepackage{texlogos}
 
+% \usepackage[backend=bibtex]{biblatex}
+% \bibliography{thesis.bib}
+
 % Tighter vspace in enumerate/itemize
 % \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
 
@@ -42,8 +45,9 @@
 \newcommand{\round}[1]{\left \lfloor #1 \right \rceil}
 
 
+\title{\textbf{Real-time monophonic pitch estimation for guitar driven sound synthesis}}
 % \title{\textbf{Real-time monophonic guitar pitch estimation\\using 12 tuned concurrent Fourier transforms}}
-\title{\textbf{Fourier transform based real-time pitch estimation}\\Assessing the limits of Fourier transform based real-time pitch estimation and construction of a pitch estimation framework}
+% \title{\textbf{Fourier transform based real-time pitch estimation}\\Assessing the limits of Fourier transform based real-time pitch estimation and construction of a pitch estimation framework}
 \author{Luc de Jonckheere}
 % \date{}
 
@@ -58,54 +62,61 @@
 
 
 \section*{Abstract}
-\textcolor{gray}{Short summary.}
-\textcolor{red}{Note that even though we focus on guitar pitch estimation, the methods described in this thesis are general to all instruments and even singing. The only guitar specific thing is the parameter optimization. We focus on guitar as it is not easily replaced by a MIDI variant as is possible with instruments such as a piano.}
+% \textcolor{red}{Note that even though we focus on guitar pitch estimation, the methods described in this thesis are general to all instruments and even singing. The only guitar specific thing is the parameter optimization. We focus on guitar as it is not easily replaced by a MIDI variant as is possible with instruments such as a piano.}
+In this thesis, we research real-time monophonic pitch estimation. Specifically, we focus on Fourier transform based methods. The limiting factor with these methods is the trade-off between latency and spectral resolution. In order to discern the two lowest notes, we need a frequency resolution of 4.9 Hz, equating to a latency of 200 milliseconds. We were able to reduce the latency to 43 milliseconds through interpolation.
+
+In order to push latency to a minimum, we developed a pitch estimation framework called Digistring. Digistring provides a wide range of pitch estimation tools; from efficient implementation of common functions to extensive feedback and experimentation tools. Furthermore, Digistring can synthesize audio and drive existing MIDI synthesizers in real-time based on the pitch estimations of the incoming audio.
 
 
+% \vfill
 \tableofcontents
+\vfill
+% \pagebreak
 
 
 \section{Introduction}
 Pitch estimation, which is also referred to as f0 estimation, is an important subtask within the field of Automatic Music Transcription (AMT). The goal of pitch estimation is to estimate the pitch or fundamental frequency $f_0$ of a given signal. In the context of AMT, pitch estimation is used to determine which notes are played in a given signal.
 
-Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time \textcolor{gray}{(we cannot peak-ahead)} and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
+Real-time pitch estimation is a subproblem where we want to estimate the note associated with the measured pitch while the musician is playing it with minimal latency. This entails we have to use the latest received signal. In contrast to non-real-time methods, we have no knowledge of what may happen ahead of time as we cannot peak-ahead and signal corresponding to previous notes is mostly irrelevant. This limits the methods we can use to solve this problem.
 
 If pitch estimation can accurately be performed in real-time, it can be used to create a digital (MIDI) instrument from an acoustic instrument. This digital instrument can then be used as an input for audio synthesizers, allowing musicians to produce sounds from a wide variety of instruments. Furthermore, accurate real-time pitch estimation can be used to automatically correct detuned instruments by pitch shifting the original signal to the closest harmonious note.
 
-The Fourier transform is often used for pitch estimation. The transform decomposes a signal into the frequencies that make up the signal. Predominant frequencies in the signal show up as spectral peaks in the frequency domain. These peaks are important to human perception of melody~\cite{hearing}. %The popularity of the Fourier transform in pitch estimation is likely due to its widespread use in
-Other popular methods used for pitch estimation include non-negative matrix factorization, autocorrelation, statistical model based estimation and hidden Markov model based estimation.
+%The Fourier transform is often used for pitch estimation. 
+Pitch estimation often relies on the Fourier transform. The transform decomposes a signal into the frequencies that make up the signal. Predominant frequencies in the signal show up as spectral peaks in the frequency domain. These peaks are important to human perception of melody~\cite{hearing}. %The popularity of the Fourier transform in pitch estimation is likely due to its widespread use in
+Other popular methods used for pitch estimation include autocorrelation, non-negative matrix factorization, statistical model based estimation and hidden Markov model based estimation.
 
-Our research focuses on monophonic pitch estimation. Here, we assume the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pickups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. State of the art commercial guitar synthesizer solutions also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive real-time polyphonic pitch estimation.
+Our research focuses on monophonic pitch estimation of the signal from an electric guitar. Here, we assume the signal contains at most one note. It is much easier to perform monophonic pitch estimation compared to polyphonic pitch estimation~\cite{monotopoly}, especially when using Fourier transform based methods, as fundamental limits of the Fourier transform inhibit our ability to discern two low pitched notes~\cite{nopoly}. Furthermore, hexaphonic guitar pick-ups are becoming more widespread, which allows us to view the guitar as six monophonic instruments instead of one six-way polyphonic instrument. State of the art commercial guitar synthesizer solutions also use these hexaphonic pick-ups, which indicates the infeasibility of accurate and responsive real-time polyphonic pitch estimation.
 
 This thesis builds upon a preliminary research project~\cite{ik}. In our research project, we found that Fourier transform based pitch estimation methods might not be well suited for real-time use due to fundamental limitations of the Fourier transform~\cite{fourierlimit}. In this work, we will further research if Fourier transform based methods are viable, as real-time pitch estimation research often relies Fourier transform based methods.
 
-Researching pitch estimation is not accessible, as many other small problems have to be solved in order to produce a working prototype on which experiments can be performed. Furthermore, automated experimentation is a lot of work to implement and as a consequence, pitch estimation research often only includes some informal testing or no experiments at all. To combat these problems, we set out to create a modular pitch estimation framework in which every pitch estimation subproblem is implemented as a separate module which can be replaced. This allows the research of one specific subproblem and the effect of specific combinations of subproblems. In addition, it provides researchers with many tools which aid in developing and fine-tuning the solutions to the different subproblems.
+Researching pitch estimation is not accessible, as many other small problems have to be solved in order to produce a working prototype on which experiments can be performed. Furthermore, automated experimentation is a lot of work to implement and as a consequence, pitch estimation research often only includes some informal testing or no experiments at all. To combat these problems, we set out to create a modular pitch estimation framework in which every pitch estimation subproblem is implemented as a separate module which can be replaced. This allows the research of one specific subproblem and the effect of specific combinations of subproblems. In addition, it provides researchers with many tools which aid in developing and fine-tuning the solutions to the different subproblems. The framework is available at \url{github.com/lucmans/digistring}.
 
-\textcolor{red}{TODO: Rewrite this paragraph.} The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.
+% \textcolor{gray}{The goal of this thesis is to research the limits of Fourier transform based real-time pitch estimation. To correctly assess the limits, we develop a pitch estimation framework. This framework will focus on extensibility and the ability to perform automated tests. This is important, as much work in this field does not provide its associated source code. This limits the ability to build on other's work and hinders direct comparisons between different methods. Our framework can provide a common ground for the different methods and algorithms to be implemented and compared in. The framework is available at \url{www.github.com/lucmans/digistring}.}
 
 
 
 \section{Related work}  \label{sec:related}
-Much research has been performed on Fourier transform based real-time pitch estimation. All research we found relies on obtaining a high resolution frequency domain in which spectral peaks can be isolated and notes can be associated with. These methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}.%, however, in our research project we found that it might still be possible. The lack of resolution in the low frequencies is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used.
-This is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi, sloomboi2}, however, this inhibits the use for real-world applications. On top of the latency from the pitch estimation algorithm, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
+Much research has been performed on Fourier transform based real-time pitch estimation. All research we found relies on obtaining a high resolution frequency domain in which spectral peaks can be isolated and notes can be associated with. These methods are deemed infeasible by some due to low frequency resolution~\cite{fourierlimit}. %, however, in our research project we found that it might still be possible. The lack of resolution in the low frequencies is especially problematic when adhering to a real-time constraint, as extra short signal frames have to be used.
+This is especially problematic when adhering to a real-time constraint, as shorter signal frames cause less frequency resolution. Some papers circumvent this problem by choosing a very high real-time constraint~\cite{sloomboi, sloomboi2}, however, this inhibits the use for real-world applications. On top of the latency from the pitch estimation algorithm, conventional operating systems also have a latency when delivering audio samples to your program due to how audio drivers work~\cite{oslatency}.
 
 A big problem with Fourier based pitch estimation is the occurrence of overtones~\cite{oud}. Especially octaves are a problem, as the fundamental and all overtones of the higher note overlap with overtones of the lower note. This is referred to as the octave problem~
 \cite{octave}. Overtones are periodic in nature, as they diminishingly repeat every multiple of the fundamental frequency. As a consequence, they could also be detected using a subsequent Fourier transform~\cite{doublefourier} on the frequency domain. However, this does not solve the octave problem.
 
-Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behavior is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the CQT transform is efficiently implemented using Fourier transforms~\cite{cqtfft} and the main problem with Fourier is the fundamentally low frequency resolution on short frames, so we are left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:physsound}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is especially important when performing polyphonic pitch estimation.
+Many different transform have been researched for pitch estimation, however, Fourier transform remains popular as it is broadly studied and its behavior is well known~\cite{survey}. Lately, the CQT transform is gaining popularity as it may provide higher resolution in some parts of the frequency domain~\cite{cqtres} at the cost of lower computational efficiency~\cite{cqtslow}. However, the CQT transform is efficiently implemented using Fourier transforms~\cite{cqtfft} and the main problem with Fourier is the fundamentally low frequency resolution on short frames, so we are left with the same problem. One big advantage is that the frequency bins can perfectly align with the notes of an instrument~\cite{cqtalign}. However, as described in Section~\ref{sec:physsound}, overtones are dissonant with respect to our notes and consequently, the CQT bins do not align with the overtones. If a note perfectly aligns with a Fourier bin, all overtones will also align. In order to cover every note, we could instead perform 12 Fourier transform in parallel. This difference is especially important when performing polyphonic pitch estimation.
 
-\textcolor{red}{TODO: Note on problems with other research, such as no experiments, no available source code, assuming normal continuous Fourier behavior instead of DFT, downsampling}
+% \textcolor{red}{TODO: Note on problems with other research, such as no experiments, no available source code, assuming normal continuous Fourier behavior instead of DFT, downsampling}
 
-\textcolor{red}{TODO: Vergelijk materiaal}
+% \textcolor{red}{TODO: Vergelijk materiaal}
 
 
 
 \section{Preliminaries}
 In order to effectively research Fourier transform based real-time pitch estimation, it is important to have a thorough understanding of how computers deal with audio and how the Fourier transform is implemented in computers. Furthermore, in order to use the output of the Fourier transform, we need to understand the characteristics of the sound generated by instruments. Moreover, in order to interpret the results of our estimated pitch and reason about the performance of the used algorithms, some music theory is necessary. Lastly, we will discuss the concept of real-time in depth, as there are multiple definition for real-time which often leads to incorrect use of the concept.
+% In order to effectively research Fourier transform based real-time pitch estimation, it is important to have a thorough understanding of how computers deal with audio and how the Fourier transform is implemented in computers. Furthermore, we will discuss the concept of real-time in depth, as there are multiple definition for real-time which often leads to incorrect use of the concept. Moreover, in order to use the output of the Fourier transform, we need to understand the characteristics of the sound generated by instruments. Lastly, in order to interpret the results of our estimated pitch and reason about the performance of the used algorithms, some music theory is necessary.
 
 
 \subsection{Audio in computers}  \label{sub:computer_audio}
-Audio in computers is represented through a series of equally spaced samples. A sample is the height of the audio wave at a specific point in time. The sample rate determines the number of samples per second used for representing the audio. The sample format determines how the height of the audio wave is represented in a sample. Often used formats are 8/16/24 bit integers and 32 bit IEEE-754 floating point numbers (which we will refer to as floats). The integer samples simply uniformly spread the range of the waveform over range of the integer~\cite{dspfloat}. Float samples typically take values in $[-1, 1]$. Samples with values outside this range are considered to be clipping. Because float samples have 24 bits precision (23 mantissa bits and a sign bit~\cite{ieeefloat}), 24 bit integer samples can converted lossless to float samples. The 8 exponent bits can be used to scale the samples to a different order, which allows us to accurately describe very soft and loud audio. Float samples have many advantages over integer samples for digital signal processing~\cite{dspfloat}, so we will always use float samples throughout this thesis.
+Audio in computers is represented through a series of equally spaced samples. A sample is the height of the audio wave at a specific point in time. The sample rate determines the number of samples per second used for representing the audio. The sample format determines how the height of the audio wave is represented in a sample. Often used formats are 8/16/24 bit integers and 32 bit IEEE-754 floating point numbers (which we will refer to as floats). The integer samples simply uniformly spread the range of the waveform over range of the integer~\cite{dspfloat}. Float samples typically take values in $[-1, 1]$. Samples with values outside this range are considered to be clipping. Because float samples have 24 bits precision (23 mantissa bits and a sign bit~\cite{ieeefloat}), 24 bit integer samples can converted lossless to float samples. The 8 exponent bits can be used to scale the samples to a different order, which allows us to describe very soft and loud audio with less range or accuracy respectively. Float samples have many advantages over integer samples for digital signal processing~\cite{dspfloat}, so we will always use float samples throughout this thesis.
 % The quality of a format is often expressed as bit depth. This is fine when comparing different integer formats, as an integer uses its full bit depth to store the height of the 
 
 % When working with audio input/output in modern operating systems such as Linux or Windows, the audio samples are gathered/retrieved from the OS's audio driver. The audio driver
@@ -115,7 +126,7 @@ When working with audio input/output in computers, a small latency is always int
 \subsection{Fourier transform}  \label{sec:fourier}
 The Fourier transform is a mathematical transform which transforms a function of time to a complex valued function of frequency and phase. Here, the magnitude represents the amplitude and the argument represents the phase of the corresponding sine wave. The function which maps the frequencies to amplitudes is called the spectrum of the time dependent function. The Fourier transform works on continuous functions and assumes an infinite time interval. Concepts such as continuous and infinite cannot be represented by a computer. Consequently, the discrete Fourier transform (DFT) has to be used for Fourier analyses on computers. The DFT can efficiently be calculated using the fast Fourier transform (FFT) algorithm.
 
-The DFT transforms a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. Technically, the bins do not form a spectrum as they are not continuous, however, within digital signal processing it is still referred to as the spectrum of the frame.% Note that a frame may also referred to as a window.
+The DFT transforms a finite sequence of equally spaced samples, which we will refer to as a frame, into an equal number of complex values representing the amplitude and phase, which we refer to as bins. Technically, the bins do not form a spectrum as they are not continuous, however, within digital signal processing it is still referred to as the spectrum of the frame. %Note that a frame may also referred to as a window.
 When working with audio, the samples are real valued, and the DFT output is symmetrical. Because of this, we can discard the second half of the output. In the rest of this thesis, we will only consider the first half of the output. Each bin corresponds to a specific frequency. All other frequencies are spread out over multiple bins. This is called spectral leakage and will be discussed later. Given a frame $F$, the number of samples in the frame is $n_F = |F|$. Using $n_F$ and sample rate $f_{\text{SR}}$, we can calculate the distance between bins in Hz:
 \[ \Delta f_{bin} = \frac{f_{\text{SR}}}{n_F} \]
 This is also referred to as the frequency resolution. Closely related to the frequency resolution is the frame length, which is calculated as follows:
@@ -126,7 +137,8 @@ The 0 Hz bin corresponds to the so called DC offset. This is the average amplitu
 % \textcolor{red}{TODO: Spectrum beyond the Nyquist frequency is reflected over the Nyguist frequency and added to the spectrum. In practice causes noise in general and in the case of peaks beyond the Nyquist frequency, even aliasing of peaks}.
 This implies we cannot simply downsample the input signal for an easy performance gain, as it might introduce noise.
 
-The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may distort the waveform if the beginning and end of a frame do not align and leads to artifacts in the spectrum. For example, in Figure~\ref{fig:framedistortion}, we take a frame shown by the red lines. The frame is not aligned to a period of the waveform and causes a distortion when repeated as seen in the second graph. Note that only sine waves with frequencies which are a multiple of $\Delta f_{bin}$ would exactly fit the frame. In our example, the distortion introduces a new high frequency component from suddenly going up and down around the frame border. It also introduces a low frequency component, as the distance between two peaks within a frame is shorter can the distance of two peaks between frames. The introduction of these new frequencies is a form of spectral leakage, as the peak in the continuous spectrum corresponding to the sine frequency leaks into multiple bins. We can smooth the distortion around frame borders by forcing the beginning and end of a frame to align. This is commonly done by applying a window function to the frame, which forces both ends of the frame to zero.
+The DFT assumes the frame to be periodic. In other words, the frame is regarded as infinitely repeating. This may distort the waveform if the beginning and end of a frame do not align and leads to artifacts in the spectrum. For example, in Figure~\ref{fig:framedistortion}, we take a frame shown by the red lines. The frame is not aligned to a period of the waveform and causes a distortion when repeated as seen in the second graph. %Note that only sine waves with frequencies which are a multiple of $\Delta f_{bin}$ would exactly fit the frame.
+In our example, the distortion introduces a new high frequency component from suddenly going up and down around the frame border. It also introduces a low frequency component, as the distance between two peaks within a frame is shorter can the distance of two peaks between frames. The introduction of these new frequencies is a form of spectral leakage, as the peak in the continuous spectrum corresponding to the sine frequency leaks into multiple bins. We can smooth the distortion around frame borders by forcing the beginning and end of a frame to align. This is commonly done by applying a window function to the frame, which forces both ends of the frame to zero.
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/framedistortion.png}
@@ -144,15 +156,24 @@ Figure~\ref{fig:windowfunc} shows the working of a window function on a frame gr
     \label{fig:windowfunc}
 \end{figure}
 
-The \textcolor{blue}{characteristics} \textcolor{gray}{(TODO: better word)} of spectral leakage from framing can be controlled using different window functions.
-%, see Figure~\ref{fig:windowfunceffect} for some examples.
-Applying no window function is referred to as using a rectangular window, as all the "wanted" samples from the signal are multiplied by 1 and all other samples by 0, effectively framing the signal. We won't discuss individual window function in this section; see Appendix~\ref{sec:windows} for an in depth discussion on the different window functions.
+The characteristics of spectral leakage from framing can be controlled using different window functions, see Figure~\ref{fig:windowfunceffect} for some examples. Applying no window function is referred to as using a rectangular window, as all the "wanted" samples from the signal are multiplied by 1 and all other samples by 0, effectively framing the signal.
+%. We won't discuss individual window function in this section; see Appendix~\ref{sec:windows} for an in depth discussion on the different window functions.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/windows.png}
+    % \includegraphics[width=\linewidth]{fig/window_rect.png}
+    % \includegraphics[width=\linewidth]{fig/window_hann.png}
+    % \includegraphics[width=\linewidth]{fig/window_welch.png}
+    % \includegraphics[width=\linewidth]{fig/window_dolph.png}
+    \caption{Examples of the spectral leakage of some window functions. On the left are the graphs of the different window functions and on the right the frequency response of the window function.}
+    \label{fig:windowfunceffect}
+\end{figure}
 
 The leakage behavior of a window function can be quantified by performing a Fourier transform on the window function. The resulting frequency domain shows the amount of leakage in neighboring bins compared to the power of the center bin. To show the leakage behavior of frequencies which do not align with a bin, we can zero-pad the window function, which causes over-sampling in the frequency domain. Zero-padding is further discussed in Section~\ref{sec:zeropadding}. Figure~\ref{fig:winleak} shows the leakage of a rectangular window when a frequency exactly matches the center frequency of a bin and the leakage when a frequency is exactly between bins. Here we can see the leakage spectrum has lobes of leakage. The lobe containing the center bin is called the main lobe and the other lobes are called side lobes. The different window functions trade-off between having a narrow main lobe width and low side lobe levels~\cite{windowfunc}.
 \begin{figure*}[b]
     \centering
     \includegraphics[width=\linewidth]{fig/winleak.png}
-    \caption{\textcolor{red}{TODO: Better image.} Leakage behavior of the rectangular window. The orange lobes represent the frequency response of the rectangular window function; the blue lines represent the signal power measured in each bin given a signal frequency at the center of the main lobe of the frequency response of the window function. In the top plot, the frequency of the signal exactly matches the center frequency of a bin. If we then look at the leakage at every bin position, we see that all signal power goes into the center bin and nothing into any other bin. In the bottom plot, we shifted the frequency response half a bin up to simulate a frequency in the signal half a bin higher than some arbitrary bin. If we now look at the height of the frequency response at every bin position, we can see that the signal power diminishingly leaks into all subsequent bins.}
+    \caption{Leakage behavior of the rectangular window. The orange lobes represent the frequency response of the rectangular window function; the blue lines represent the signal power measured in each bin given a signal frequency at the center of the main lobe of the frequency response of the window function. In the top plot, the frequency of the signal exactly matches the center frequency of a bin. If we then look at the leakage at every bin position, we see that all signal power goes into the center bin and nothing into any other bin. In the bottom plot, we shifted the frequency response half a bin up to simulate a frequency in the signal half a bin higher than some arbitrary bin. If we now look at the height of the frequency response at every bin position, we can see that the signal power diminishingly leaks into all subsequent bins.}
     \label{fig:winleak}
 \end{figure*}
 
@@ -177,7 +198,7 @@ Real-time is a difficult concept, as it has multiple definitions based on what f
 Even though the first definition is very relevant when working with audio, it is not relevant for us. The audio drivers of operating systems handle all timing for us. We simply have to wait for samples to be recorded and made available to our program. We only have to keep the sampling rate in mind when working with the samples as shown in the previous section.
 
 % TODO: Maybe it's a firm real-time system. And usefulness degrades more if latency was higher.
-In order to allow guitarists to use their guitar as a MIDI instrument, our system has to respond within a small time frame. On top of that, if the system fails to respond quickly enough, the usefulness of the result degrades, as timing is very important when playing an instrument. These restrictions would classify our system as a soft real-time system. We choose a real-time of constraint of \textcolor{red}{TODO} milliseconds. We elaborate on this choice in Section~\ref{sec:constraint}.
+In order to allow guitarists to use their guitar as a MIDI instrument, our system has to respond within a small time frame. On top of that, if the system fails to respond quickly enough, the usefulness of the result degrades, as timing is very important when playing an instrument. These restrictions would classify our system as a soft real-time system. We choose a real-time of constraint of 20 milliseconds. We elaborate on this choice in Section~\ref{sec:constraint}.
 
 Other work in real-time pitch estimation often uses the forth definition of real-time. This is problematic when using Fourier transform based methods, as many papers choose large frame sizes to get a high resolution in the frequency domain. For instance, in order to discern the two lowest notes on a guitar which are 4.9 Hz apart, we would need a frame length of 204 milliseconds. This implicit deadline is well over our real-time constraint and would be unplayable for any musician. Other papers we found which do explicitly set a real-time constraint, choose very high constraints from 140 ms~\cite{sloomboi} up to 360 ms~\cite{sloomboi2}. These constraints were likely chosen with the inherent limits of their solutions in mind. It is very important to set a real-time constraint solely based on the expectation of the systems from an outside perspective. Real-time constraints chosen with the inner working of the system in mind are merely a measure of performance that is hoped to be achieved and claiming a system is real-time based on such constrains is considered fraudulent. We have found no papers Fourier transform based pitch estimation papers which choose a sensible real-time constraint.
 
@@ -279,7 +300,7 @@ The perceived loudness of a note over time can be described using an ADSR envelo
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/envelope.png}
-    \caption{Example of an ADSR envelope \textcolor{red}{(TODO: Better image)}.}
+    \caption{Example of an ADSR envelope.}
     \label{fig:adsr}
 \end{figure}
 
@@ -313,63 +334,62 @@ In Section~\ref{sec:related}, we mentioned overtones are dissonant with respect 
     \label{tab:overseries}
 \end{table}
 
-\textcolor{red}{TODO: Rewrite.}
-As mentioned in Section~\ref{sec:related}, when using the CQT transform, none of the non-octave overtones coincides with a CQT bin as the CQT bins are exponentially spaced like the notes in a scale. This causes the frequencies of the overtones to spread out over bins, resulting in more noise in the frequency domain. Furthermore, overtones are important for discerning fundamentals from noise generated by transients. By using a Fourier transform tuned to a specific note, all its overtones are also coincide with Fourier bins. By performing a Fourier tuned to every note in the 12 tone scale, we can measure every note and its overtones.
+% We also mentioned in Section~\ref{sec:related} that, when using the CQT transform, none of the non-octave overtones coincides with a CQT bin as the CQT bins are exponentially spaced like the notes in a scale. This causes the frequencies of the overtones to spread out over bins, resulting in more noise in the frequency domain. Furthermore, overtones are important for discerning fundamentals from noise generated by transients. By using a Fourier transform tuned to a specific note, all its overtones are also coincide with Fourier bins. By performing a Fourier tuned to every note in the 12 tone scale, we can measure every note and its overtones.
 
-\textcolor{gray}{TODO: This thesis mainly focuses on monophonic pitch estimation, as it is much easier to perform. But we can still see how well our strategy works in the polyphonic case.
-TODO: A big problem in monophonic pitch estimation is the octave problem. Octaves are difficult to discern as the fundamental frequency and overtones of the higher note coincide with the overtones of the lower note. A similar problem arises
-TODO: The main problem in polyphonic pitch estimation comes from the occurrence of overtones. As mentioned before, notes in octave tend overshadow each other. Furthermore, as shown in Table~\ref{tab:overtones}, the overtones of a note can coincide with the...
-TODO: Overtone overlap and polyphonic difficulty.}
-\begin{table}[h]
-    \centering
-    \hfill
-    \begin{tabular}{r|l}
-        $n$ & $f^{C_3}_0*n$ \\
-        \hline
-        1 & 130.813 \\
-        2 & 261.626 \\
-        \textcolor{red}{3} & \textcolor{red}{392.438} \\
-        4 & 523.251 \\
-        \textcolor{blue}{5} & \textcolor{blue}{654.064}
-    \end{tabular}
-    \hfill
-    \begin{tabular}{r|l}
-        $n$ & $f^{E_3}_0*n$ \\
-        \hline
-        1 & 164.814 \\
-        2 & 329.628 \\
-        3 & 494.441 \\
-        \textcolor{blue}{4} & \textcolor{blue}{659.255} \\
-        5 & 824.069
-    \end{tabular}
-    \hfill
-    \begin{tabular}{r|l}
-        $n$ & $f^{G_3}_0*n$ \\
-        \hline
-        1 & 195.998 \\
-        \textcolor{red}{2} & \textcolor{red}{391.995} \\
-        3 & 587.993 \\
-        4 & 783.991 \\
-        5 & 979.989
-    \end{tabular}
-    \hfill
-    \caption{Overtones of C, E and G.}
-    \label{tab:overtones}
-\end{table}
-\begin{table}[h]
-    \centering
-    \begin{tabular}{c|c|c}
-        Note & $f$ & $\Delta f$ \\
-        \hline
-        $f^{C_3}_2$ & 392.438 & \multirow{2}{*}{0.443} \\
-        $f^{G_3}_1$ & 391.995 & \\
-        \hline
-        $f^{C_3}_4$ & 654.064 & \multirow{2}{*}{5.191} \\
-        $f^{E_3}_3$ & 659.255 &
-    \end{tabular}
-    \caption{Colliding overtones.}
-    \label{tab:diff}
-\end{table}
+% \textcolor{gray}{TODO: This thesis mainly focuses on monophonic pitch estimation, as it is much easier to perform. But we can still see how well our strategy works in the polyphonic case.
+% TODO: A big problem in monophonic pitch estimation is the octave problem. Octaves are difficult to discern as the fundamental frequency and overtones of the higher note coincide with the overtones of the lower note. A similar problem arises
+% TODO: The main problem in polyphonic pitch estimation comes from the occurrence of overtones. As mentioned before, notes in octave tend overshadow each other. Furthermore, as shown in Table~\ref{tab:overtones}, the overtones of a note can coincide with the...
+% TODO: Overtone overlap and polyphonic difficulty.}
+% \begin{table}[h]
+%     \centering
+%     \hfill
+%     \begin{tabular}{r|l}
+%         $n$ & $f^{C_3}_0*n$ \\
+%         \hline
+%         1 & 130.813 \\
+%         2 & 261.626 \\
+%         \textcolor{red}{3} & \textcolor{red}{392.438} \\
+%         4 & 523.251 \\
+%         \textcolor{blue}{5} & \textcolor{blue}{654.064}
+%     \end{tabular}
+%     \hfill
+%     \begin{tabular}{r|l}
+%         $n$ & $f^{E_3}_0*n$ \\
+%         \hline
+%         1 & 164.814 \\
+%         2 & 329.628 \\
+%         3 & 494.441 \\
+%         \textcolor{blue}{4} & \textcolor{blue}{659.255} \\
+%         5 & 824.069
+%     \end{tabular}
+%     \hfill
+%     \begin{tabular}{r|l}
+%         $n$ & $f^{G_3}_0*n$ \\
+%         \hline
+%         1 & 195.998 \\
+%         \textcolor{red}{2} & \textcolor{red}{391.995} \\
+%         3 & 587.993 \\
+%         4 & 783.991 \\
+%         5 & 979.989
+%     \end{tabular}
+%     \hfill
+%     \caption{Overtones of C, E and G.}
+%     \label{tab:overtones}
+% \end{table}
+% \begin{table}[h]
+%     \centering
+%     \begin{tabular}{c|c|c}
+%         Note & $f$ & $\Delta f$ \\
+%         \hline
+%         $f^{C_3}_2$ & 392.438 & \multirow{2}{*}{0.443} \\
+%         $f^{G_3}_1$ & 391.995 & \\
+%         \hline
+%         $f^{C_3}_4$ & 654.064 & \multirow{2}{*}{5.191} \\
+%         $f^{E_3}_3$ & 659.255 &
+%     \end{tabular}
+%     \caption{Colliding overtones.}
+%     \label{tab:diff}
+% \end{table}
 
 
 
@@ -391,19 +411,20 @@ Before we start constructing our pitch estimation system, let us first choose a 
 % Therefore, we will deduce a reasonable real-time constraint from a few different arguments.
 Note that our real-time constraint only considers pitch estimation latency. If we want to do anything with the pitch estimation results in real-time, such as synthesizing audio, additional latency will be introduced. For this reason, we shouldn't put our real-time constraint right at the critical latency, but leave some headroom for the program using our estimated pitches.
 
-Even though the critical latency is subjective, it is the factor determining if a real-time pitch estimation system is usable in musical context. In order to determine the critical latency empirically, we created a tool called \textit{delayed playback}, which plays back recorded audio with an arbitrary latency. Using \textit{delayed playback}, we found a latency of \textcolor{red}{TODO} milliseconds is a reasonable latency at which we can still comfortably play many songs. \textit{Delayed playback} can also be used to verify if a real-time constraint chosen by someone else is reasonable by your own standards.% The tool is described in depth in Section~\ref{sub:playback_latency}.% Note that the reported latency from does not include the latencies introduced by the audio drivers and hardware discussed in Section~\ref{sub:computer_audio}.
+Even though the critical latency is subjective, it is the factor determining if a real-time pitch estimation system is usable in musical context. In order to determine the critical latency empirically, we created a tool called \textit{delayed playback}, which plays back recorded audio with an arbitrary latency. Using \textit{delayed playback}, we found a latency of 30 milliseconds is a reasonable latency at which we can still comfortably play many songs. \textit{Delayed playback} can also be used to verify if a real-time constraint chosen by someone else is reasonable by your own standards.% The tool is described in depth in Section~\ref{sub:playback_latency}.% Note that the reported latency from does not include the latencies introduced by the audio drivers and hardware discussed in Section~\ref{sub:computer_audio}.
 
 % \textcolor{gray}{TODO: Rewrite paragraph, as playing faster is easier due to relying more on muscle memory instead of listening to yourself.}
 % The critical latency depends, among other things, on the speed with which notes are played. For instance, let's assume a latency of 50 milliseconds. When playing a slow song consisting of quarter notes at 120 BPM, resulting in 2 notes per second, the latency is only a tenth of the note duration. However, when playing a fast solo consisting of sixteenth notes at 210 BPM, resulting in 12 notes per second, the latency is 70\% of the note duration. This means you hear more of the previous note than the current note for the duration with which the current note is played, which makes playing at fast speeds extra difficult. % This tricks the brain in such a way that it prevents you from staying on beat.
 
-There is a limit on how fast we can estimate the pitch of a played note. For instance, when we consider transients noise, we have to wait for the transient to pass before we can gather samples containing the note. Then, we need enough samples such that the lowest bin of the DFT doesn't exceed the frequency of the lowest note. In the case of \note{E}{2}, which is 82.407 Hz, we would need a minimum frame length of $ \frac{1}{82.407} * 1000 = 12.135 $ milliseconds. Due to spectral leakage, using such small frame lengths is not feasible. However, as outlined in Section~\ref{sub:waveform_packet}, we can translate this idea to the time domain. In practice, this would result in a minimum latency of 14 to 15 milliseconds.
+There is a limit on how fast we can estimate the pitch of a played note. For instance, when we consider transients noise, we have to wait for the transient to pass before we can gather samples containing the note. Then, we need enough samples such that the lowest bin of the DFT doesn't exceed the frequency of the lowest note. In the case of \note{E}{2}, which is 82.407 Hz, we would need a minimum frame length of $ \frac{1}{82.407} * 1000 = 12.135 $ milliseconds. Due to spectral leakage, using such small frame lengths is not feasible. %However, as outlined in Section~\ref{sub:waveform_packet}, we can translate this idea to the time domain. In practice, this would result in a minimum latency of 14 to 15 milliseconds.
 
 In order to assess what we can reasonably expect from our system, we measured the latency of a commercial guitar synthesizer solution. This is described in depth in Appendix~\ref{sec:ax100}. Here, we found the Axon AX 100 MKII at best has a latency of 15 milliseconds when it is able to guess the note "the first try". Otherwise, the latency may reach up to 40 milliseconds.
 
-\textcolor{gray}{TODO: Note on unaccounted latencies (audio driver/hardware latencies).}
-A careful reader may have noticed we actually discussed two different latencies. We mostly reason about the latency of our pitch estimation system. However, when reasoning about the critical latency, latencies from the audio driver and hardware as discussed in Section~\ref{sub:computer_audio} do matter. \textcolor{gray}{TODO: Estimate on these latencies. Estimate of latency when running Digistring's algorithms on specialized hardware}.
+% \textcolor{gray}{TODO: Note on unaccounted latencies (audio driver/hardware latencies).}
+% A careful reader may have noticed we actually discussed two different latencies. We mostly reason about the latency of our pitch estimation system. However, when reasoning about the critical latency, latencies from the audio driver and hardware as discussed in Section~\ref{sub:computer_audio} do matter. \textcolor{gray}{TODO: Estimate on these latencies. Estimate of latency when running Digistring's algorithms on specialized hardware}.
 
-\textcolor{gray}{TODO: Our real-time constraint choice.}
+% \textcolor{gray}{TODO: Our real-time constraint choice.}
+Taking everything discussed in this section into account, we choose a real-time constraint of 20 milliseconds.
 
 % \textcolor{gray}{Start with the factors coming into play when choosing the real-time constraint for our system (latency, played notes per second etc). Note on measured latency in Appendix~\ref{sec:ax100}. Empirically found bounds on latency using our latency program}
 
@@ -425,13 +446,13 @@ We implemented this basic Fourier pitch estimation algorithm in Digistring (\tex
 \subsection{Overlapping frames}  \label{sec:overlapping}
 As seen in the previous section, a low frame rate is problematic, as our note output rate is synced to the frame processing rate, essentially quantizing our note estimation to the frame processing rate. The straightforward solution would be to decrease the frame length, however, the frame length is limited by the minimum frequency resolution we need. Instead, we can increase the frame rate by partially overlapping subsequent frames.
 
-Overlapping frames has several advantages. Apart from the increased frame rate, which in turn decreases quantization error, it may decrease the average latency of processing a sample. Furthermore, as transients are very short in the time domain, having more frames over a certain period of time decreases the relative number of frames containing the transient, which causes more frames to have a useful note estimate, see Figure~\ref{fig:overlap_transient} for a graphical explanation.
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{fig/overlap_transient.jpg}
-    \caption{\textcolor{red}{TODO: Correct image showing overlap instead of just shorter frames.} Given the signal given on top with a transient at T, relatively less frame estimations are ruined by the transient when using a higher frame rate.}
-    \label{fig:overlap_transient}
-\end{figure}
+Overlapping frames has several advantages. Apart from the increased frame rate, which in turn decreases quantization error, it may decrease the average latency of processing a sample. Furthermore, as transients are very short in the time domain, having more frames over a certain period of time decreases the relative number of frames containing the transient, which causes more frames to have a useful note estimate.%, see Figure~\ref{fig:overlap_transient} for a graphical explanation.
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=\linewidth]{fig/overlap_transient.jpg}
+%     \caption{\textcolor{red}{TODO: Correct image showing overlap instead of just shorter frames.} Given the signal given on top with a transient at T, relatively less frame estimations are ruined by the transient when using a higher frame rate.}
+%     \label{fig:overlap_transient}
+% \end{figure}
 
 As two subsequent frames share information when overlapping, the estimation from subsequent frames is correlated. This limits the usefulness of overlapping beyond a certain overlap ratio~\cite{overlap}. However, as long as we don't overlap so much that samples are gathered faster than we can process them, overlapping doesn't incur an addition latency on the pitch estimation system.
 
@@ -446,11 +467,11 @@ As mentioned in Section~\ref{sec:fourier}, the frequency resolution of a DFT is 
 It is important to note that zero padding does not increase the resolution of the DFT, as no extra information about the original signal is added to the frame. It merely interpolates the coarse spectrum to become more smooth~\cite{zeropad1}. Two frequencies closer than $\Delta f_{bin}$ together form one big lobe in the smoothed spectrum~\cite{zeropad2}. However, the interpolated peaks may have a higher amplitude than the original peaks, thus improving the results of our basic pitch estimation algorithm. See Figure~\ref{fig:visualpadding} for a graphical example of this.
 
 Zero padding is relatively compute intensive form of interpolation~\cite{interpolnozero}. % The time complexity of the DFT is $O(N^2)$, where $N$ is the frame size. In the case of the FFT, the time complexity is reduced to $O(N \log N)$.
-\textcolor{red}{TODO: }\textcolor{gray}{For a length-N signal, the computational complexity of the Fast Fourier Transform (FFT) algorithm for calculating the DFT is O(N log N). So, zero padding a signal by a factor of D up to a length N D raises the cost by a factor D(logN D + 1). Zero padding by a factor D increases the cost of the algorithm by a factor that is greater than D—this is very expensive.}
+% \textcolor{red}{TODO: }\textcolor{gray}{For a length-N signal, the computational complexity of the Fast Fourier Transform (FFT) algorithm for calculating the DFT is O(N log N). So, zero padding a signal by a factor of D up to a length N D raises the cost by a factor D(logN D + 1). Zero padding by a factor D increases the cost of the algorithm by a factor that is greater than D—this is very expensive.}
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/zero_pad_interpolate.png}
-    \caption{\textcolor{red}{TODO: Better image.} Left and right figure show a DFT spectrum without and with zero padding respectively. Zeros are padded such that $n_{F_P} = 2 * n_F$ holds. The blue lines represent the bin magnitudes. The orange lobes represent the frequency content of the frame if infinite zero padding was applied.}
+    \caption{The top and bottom figure show a DFT spectrum without and with zero padding respectively. Zeros are padded such that $n_{F_P} = 2 * n_F$ holds. The blue lines represent the bin magnitudes. The orange lobes represent the frequency content of the frame if infinite zero padding was applied.}
     \label{fig:visualpadding}
 \end{figure}
 
@@ -488,7 +509,7 @@ The Lagrange polynomial describing the interpolation parabola is defined as foll
 \begin{align*}
     % f(x) =\ & \sum_{n=-1}^{1} |b_{j + n}| \ \left(\prod_{j=-1, j \neq i}^{1} \frac{x - (j + m)}{(j + n) - (j + m)}\right) \\
     L(x) =\ & \sum_{n=-1}^{1} w(|b_{j + n}|) \ \left(\prod_{\substack{m=-1\\m \neq n}}^{1} \frac{x - (j + m)}{(j + n) - (j + m)}\right) \\
-\\[-2mm]
+\\[-3mm]
          =\ & \alpha * \frac{x - j}      {(j - 1) - j}       * \frac{x - (j + 1)}{(j - 1) - (j + 1)} \\
          &+ \beta    * \frac{x - (j - 1)}{j - (j - 1)}       * \frac{x - (j + 1)}{j - (j + 1)} \\
          &+ \gamma   * \frac{x - (j - 1)}{(j + 1) - (j - 1)} * \frac{x - j}      {(j + 1) - j} \\
@@ -514,7 +535,7 @@ The Lagrange polynomial describing the interpolation parabola is defined as foll
          &+ \gamma   * \frac{1}{2}(x^2 + x - 2jx - j + j^2)
 \end{align*}
 
-One often overlooked detail is that the three interpolation points need to be in one spectral lobe, as we approximate the shape of the lobe with a quadratic function. Most window functions have a wide enough main lobe width, causing the three points to always be within the main lobe. In the case of the rectangular window, there are at most two bins within the main lobe. By zero padding, we can increase the number of bins in the spectrum and in turn get more than two bins in the main lobe, see Figure~\ref{fig:visualpadding}. In general, zero-padding decreases the error of quadratic interpolation~\cite{interpolnozero}.
+One often overlooked detail is that the three interpolation points need to be in one spectral lobe as we approximate the shape of the lobe with a quadratic function. Most window functions have a wide enough main lobe width, causing the three points to always be within the main lobe. In the case of the rectangular window, there are at most two bins within the main lobe. By zero padding, we can increase the number of bins in the spectrum and in turn get more than two bins in the main lobe, see Figure~\ref{fig:visualpadding}. In general, zero-padding decreases the error of quadratic interpolation~\cite{interpolnozero}.
 
 
 \subsection{Peak picking}
@@ -529,7 +550,9 @@ One way to determine if a peak is significant enough is Gaussian average envelop
 \[ w(n) = e^{-\pi (\frac{n}{\sigma})^2} \]
 Here, the parameter $\sigma$ determines the relative weight of close bins compared to distant bins. Higher values for $\sigma$ causes nearby bins to have a higher weighting.
 
-\textcolor{red}{TODO: Min-max peak picking. Peak filtering.}
+As shown in Section~\ref{sub:expspeed}, Gaussian peak picking is an expensive process. As bin weights of far bins quickly become zero, we allow for a maximum kernel width to be set, which limits the number of bins to average. We set this number as a factor of the frame size and refer to it as the kernel width factor.
+
+In large quiet parts of the spectrum, the envelope will also be close to the noise floor. To account for this, we allow for a minimum peak power threshold to be set, removing the peaks found in noise.
 
 
 \subsection{Note selection from peaks}
@@ -538,15 +561,29 @@ Due to overtones and errors in peak picking, not every picked peak corresponds t
 In our basic pitch estimation algorithm, we implicitly assume the loudest peak as the fundamental frequency of the note contained in the frame. However, in practice, the first overtone may be louder than the fundamental frequency, causing octave errors. We could select the lowest peak as the fundamental frequency, however, this method is susceptible to low frequency noise.
 
 Instead of selecting a single peak, we can look for a group of peaks which form a valid series of overtones, as played notes always come with overtones. As mentioned in Section~\ref{sec:physsound}, overtones are not exact integer multiples of the fundamental frequency, so we need to set a threshold on the maximum allowed difference. Because notes are separated exponentially in frequency, our threshold should scale logarithmically. This is achieved by using cents as a measure of error. Then, we can either count the number of overtones for every peak and return the peak with the most overtones, or add the heights of the overtones up and return the peak with the highest overtone power. See Algorithm~\ref{alg:noteselect} for a pseudo-code implementation.
+
+We can make our note selection more resilient to noise by requiring a minimum number of overtones for a note to be selected. We removed this filter, as long sustained notes often have no more overtones, causing our note estimation to be cut short. However, if note tracking is implemented, one could only require overtones for new notes. As discussed in Section~\ref{sec:ax100}, the Axon also seems to perform this filtering. %Furthermore, when playing two notes with no break in between, peaks from both notes are present in the spectrum due to overlapping. We can use this information to filter transients by requiring that the number 
 \input{pseudo_code/note_select.pc}
 
-\textcolor{gray}{Note filtering (only allow note selection in range of instrument).}
+
+\subsection{Filtering}
+As described in the previous sections, during most pitch estimation stages, we filter peaks/notes based on conditions such as minimal peak power or minimum number of overtones. Some filtering steps are however not necessarily tied to a specific estimation stage. For example, if we know a guitar only produces notes between \note{E}{2} and \note{E}{6} and the note selector selects a note outside if this range, the signal likely contains too much noise for an accurate estimation and we can discard the result. We refer to this filter as a range filter.
+
+Similar to the minimum peak threshold during peak picking, we can also set a minimum signal power before we try to find notes in a frame. We refer to this threshold as the frame power threshold.
+
+The biggest problem with threshold filters is that the threshold might not be a constant. For instance, if a guitarist switches from playing soft to loud, we need a higher threshold, as the noisy peaks will also increase in volume. As a consequence, we developed a signal-to-noise filter, which filters any peak with is softer than the loudest peak by some constant factor.
+
+Another important filter is a transient filter. During a transient, all estimations are likely wrong and it might be better to output nothing at all. An easy method of detecting transients comes from the fact that transients occur at onsets, during which the signal power increases significantly. If the signal power in the current frame is some arbitrary threshold higher than in the previous frame, we do not report any note events.
 
 
 \subsection{High resolution estimator}  \label{sec:highrespitch}
-\textcolor{gray}{Base algorithm (apply Fourier, calc norms, pick peaks, find notes in peaks, ...). See Algorithm~\ref{alg:highres_overview} for an overview.}
+We have put all of the above ideas together to create the HighRes estimator. Its name stems from the general strategy it uses to perform pitch estimation, which is obtaining an high resolution frequency domain to approximate the continuous spectrum with. See Algorithm~\ref{alg:highres_overview} for an overview.
 
-\textcolor{gray}{All the different parameters which have to be configured for good results.}
+Our estimator starts by applying a window function to the frame. We opted to use the Hann window function, as it strikes a good balances between a narrow center lobe and low leakage. Note that the frame is already zero-padded. This is done by creating a larger frame buffer than needed and zeroing the extra size once. As the zero-padded area should never be altered, this provides us with zero-padding for every frame. The window function only windows the non-padded part of the frame buffer. We then apply the Fourier transform on the frame buffer, giving us a frequency domain. This is converted to a spectrum by calculating the norm on every Fourier bin. From this spectrum, we create a list of peak locations using Gaussian peak picking. The peak locations are then refined using LQIFFT. From these interpolated peaks, we select the peak with the most overtones as our note estimation. %Lastly, we perform some filtering on the final result, such as range filtering.
+
+Any of the functions in Algorithm~\ref{alg:highres_overview} can easily be replaced to create a different pitch estimation strategy, as long as the input and output is of the same kind. For instance, if we want to work on a logarithmically scaled spectrum, we can use a different \texttt{calc\_norms()} function which scales its output. Or we can change the peak-picking strategy to a non-Gaussian envelope based one by changing out \texttt{pick\_peaks()}.
+
+Our HighRes estimator has many parameters which have to be tuned for a satisfactory result. The most important one is the \textit{frame size}. This determines the frequency resolution in our spectrum. The amount of zero-padding is determined by \textit{zero-pad factor}. The total frame size is determined by adding \textit{frame size} * \textit{zero-pad factor} to the frame size. In other words, \textit{zero-pad factor} determines the number of zeros to add to the frame size as a factor of the frame size. The amount of overlap is controller using \textit{overlap factor}, which determines the number of overlapping samples by multiplying the frame size by this factor. To prevent peak picking on empty noise, we require a minimum signal power determined by \textit{power threshold}. Every peak also has a separate threshold \textit{peak threshold}. In the case of Gaussian peak picking, we instead use \textit{envelope threshold}. The envelope for Gaussian peak picking is controlled by \textit{sigma} and \textit{kernel width factor}. Lastly, our signal to noise filter is controlled by \textit{signal to noise factor} and the range filter is controlled by \textit{lowest note} and \textit{highest note}.
 
 \input{pseudo_code/highres_overview.pc}
 
@@ -559,11 +596,11 @@ Instead of selecting a single peak, we can look for a group of peaks which form 
 \section{Digistring}
 % \textcolor{gray}{Details about the program I've written. Usage instructions, code choices, code structure, screenshots, expandability. TODO!!! Our framework provides scientist willing to research real-time pitch estimation an efficient implementation of many basic functions (e.g. efficient overlapping buffers, debug wave form generation, note synthesis based on estimation).}
 %
-Pitch estimation research is not accessible, especially the real-time case. It is not necessarily difficult to implement some pitch estimation algorithm, however, such an implementation would essentially be a black box, as the resulting note estimation does not provide any information on how this estimate came to be. As outlined in Section~\ref{sec:highrespitch} and throughout this section, our pitch estimation algorithm has multiple stages all with multiple parameters which effect the performance of subsequent stages. Since we have extremely limited resolution in the frequency domain in order to minimize latency, it is very important all these parameters can be tuned very carefully. This requires extensive feedback from the estimation process. Furthermore, performing automated experiments is such a hassle, that most other work only includes some informal tests to verify the performance of their pitch estimation systems.
+Pitch estimation research is not accessible, especially the real-time case. It is not necessarily difficult to implement some pitch estimation algorithm, however, such an implementation would essentially be a black box, as the resulting note estimation does not provide any information on how this estimate came to be. Furthermore, it is not easy to verify the output matches the input. As outlined in Section~\ref{sec:highrespitch} and throughout this section, our pitch estimation algorithm has multiple stages all with multiple parameters which effect the performance of subsequent stages. Since we have extremely limited resolution in the frequency domain in order to minimize latency, it is very important all these parameters can be tuned very carefully. This requires extensive feedback from the estimation process. Furthermore, performing automated experiments is such a hassle, that most other work only includes some informal tests to verify the performance of their pitch estimation systems.
 
 To make pitch estimation research more accessible, we set out to create a pitch estimation framework called Digistring. This framework includes efficient implementations for all concepts described in this thesis, extensive graphical and auditory feedback of the estimation process, the ability to read samples from the audio driver or a file, tools for automated testing/performance measuring and an abstraction for pitch estimators such that all these features work with any arbitrary pitch estimation algorithm. Even though this thesis focuses on monophonic pitch estimation, Digistring supports both monophonic and polyphonic pitch estimation.
 
-Digistring is implemented in \cpluspluslogo, as it is a high performance language suited for real-time systems. It uses FFTW3 for efficient Fourier transforms and SDL2 for graphics and audio. Digistring is available at \url{www.github.com/lucmans/digistring}.
+Digistring is implemented in \cpluspluslogo, as it is a high performance language suited for real-time systems. It uses FFTW3 for efficient Fourier transforms and SDL2 for graphics and audio. These libraries have been chosen, as they are both available on most Linux distributions. Digistring is available at \url{www.github.com/lucmans/digistring}.
 
 
 \subsection{Digistring overview}
@@ -585,9 +622,9 @@ Estimators are split up in two phases: the initialization phase and estimation p
 
 When using zero-padding, apply the window function as if the input buffer wasn't zero-padded. In general, any modification to the input signal should never affect the zero-padding. Consequently, the padding only has to be zeroed in initialization phase, as it should never be overwritten.
 
-\textcolor{gray}{TODO? As discussed in Section~\ref{sec:fourier}, we don't perform absolute signal power estimation. Instead, all note amplitudes reported by an estimator are on an arbitrary scale. As a consequence, output modules need to keep track of the maximum reported amplitude to which a specific note's amplitude can be compared to.}
+As discussed in Section~\ref{sec:fourier}, we don't perform absolute signal power estimation. Instead, all note amplitudes reported by an estimator are on an arbitrary scale. As a consequence, output modules need to keep track of the maximum reported amplitude to which a specific note's amplitude can be compared to.
 
-The estimator at the center of this thesis is the high resolution estimator, which we refer to as the HighRes estimator. Its name stems from the general strategy it uses to perform pitch estimation, which is obtained an as high resolution frequency domain as possible to approximate the continuous spectrum with. \textcolor{red}{Implementation details.}
+% The main estimator developed for this thesis is the high resolution estimator, which we refer to as the HighRes estimator. Its name stems from the general strategy it uses to perform pitch estimation, which is obtaining an as high resolution frequency domain as possible to approximate the continuous spectrum with.% \textcolor{red}{Implementation details.}
 
 
 \subsection{Sample getter}  \label{sub:samplegetter}
@@ -605,7 +642,7 @@ A simple overlap implementation would save a copy of the entire input buffer, se
     \label{fig:overlapgraph}
 \end{figure}
 
-Since estimators are agnostic to overlapping, the note events reported by the estimator will overlap if the input frames overlap. Since the output modules assume every given note event list to directly follow the preceding one, we have to adjust the note events to only reflect the newly acquired samples. Moreover, it is possible for an estimator to find a note in the beginning of a frame which wasn't found when the note was at the end of the frame. In other words, it may find a note event completely in the past which wasn't found when the relevant samples were the present. We simply discard these past note events, as past information is irrelevant in real time pitch estimation.
+Since estimators are agnostic to overlapping, the note events reported by the estimator will overlap if the input frames overlap. Since the output modules assume every given note event list to directly follow the preceding one, we have to adjust the note events to only reflect the newly acquired samples. As a consequence, it is possible for an estimator to find a note in the beginning of a frame which wasn't found when the note was at the end of the frame. In other words, it may find a note event completely in the past which wasn't found when the relevant samples were the present. We simply discard these past note events, as past information is irrelevant in real time pitch estimation.
 
 When reading samples from an audio device, there might not be enough samples ready to fill a frame. This might cause partial reads on non-blocking audio APIs, which are solved using a basic read loop. Here, we simply loop the read call until the frame is filled, which causes high CPU usage. However, using the sample rate, we can calculate how long we have to wait until enough samples are ready and sleep for this duration. This reduces the CPU usage of Digistring, which makes Digistring run significantly more energy efficient. However, this does require the operating system to guarantee a timely return from the sleep call, which in Linux is only the case when using the real-time kernel. Furthermore, modern CPUs scale down their performance when they aren't fully utilized and it may take some time before the CPU is back in full performance mode, which causes additional latency after sleeping. As the optimization doesn't improve estimation accuracy or latency, we disabled it in Digistring.
 
@@ -613,21 +650,23 @@ We have implemented four different sample getters in Digistring. The most import
 % For information about adding additional sample getters to Digistring, see Appendix~\ref{sec:add_to_digistring}.
 
 
-\subsection{Real time sound synthesis}
+\subsection{Real time sound synthesis}  \label{sub:rtsynth}
 To verify if the results of an estimator are musically sound, we implemented a synthesizer interface in Digistring. Given a list of note events, a sample buffer and its size, the synthesizer will fill the buffer with samples such that, when played back, the resulting sound correctly represents the note events. Generating the samples has to be done carefully, as discontinuities generated samples cause audible plops in the resulting audio.% This means we cannot generate sound waves in the buffer exactly where the note events describe them, as note events likely no not align with the wave's periods.
 
 There are two cases where discontinuities may arise when synthesizing sine waves. The first is within a buffer. If we for example want to generate a one hertz sine wave for 1.25 seconds, the wave would end at its highest point and go back to silence the next sample, causing a large discontinuity. We can circumvent this by altering sine wave in such a way that it does reach a zero crossing before stopping. For instance, we can keep generating samples until the waveform reaches a zero crossing, which causes temporal distortion \textcolor{gray}{(distortions in time)} in the synthesized sound. In the case of sine waves, this quantizes note lengths to half the frequency, as sine waves have two equally spaced zero crossings. We can also stop the sine wave early if the previous zero crossing is closer than the next. Using this technique, the worst case temporal distortion on a guitar would be 3 milliseconds, as the \note{E}{2} has a zero crossing every $ \frac{1000}{82.41} / 2 \approx 6 $ milliseconds. We can also alter the end of the sine wave to force the end to zero, by either amplitude modulating the end of the wave or by adding samples which quickly go back to zero. These methods causes spectral distortions \textcolor{gray}{(distortions in frequency)}.
 
 The second case where discontinuities may arise is when a note is not finished at the end of a frame. If the note ended and the next frame contains silence at the start, the signal should go back to 0 as described in the previous paragraph. If the note sustains or another note is played at the start of the next frame, the synthesizer has to continue from this point. Because of this, a synthesizer needs some inter-frame communication.
 
-\textcolor{gray}{TODO: Rewrite. }
-Our sine synthesizer algorithm starts by zeroing the synth buffer. We first try to zero notes which were not zero at the end of the previous frame. Then, we iterate over every note event and add the generated sine wave samples corresponding to the note event to the synth buffer in the right place. We make sure both ends of the note event samples are at zero by temporally shifting the offset of the note. We only shift the offset, as the onset is more important for conveying rhythm. For every note event that could not reach zero at the end of the synth buffer, we save the note and the phase corresponding to the last generated sample. By saving the phase of the last sample of a note, we can continue at the correct position in the corresponding sine wave in the next frame. This algorithm will always ensure continuity, even if there is polyphony in the note events.
+We have implemented several sine synthesizers. They all share the same base algorithm. We first start by zeroing the synth buffer. Then, we try to finish sines which were not zero at the end of the previous frame. Lastly, we iterate over all note events and add the corresponding sines to the synth buffer. If any sines are not zero at the end of a frame, we add them to a list so that we can finish them next frame. An example of generating sine waves of a arbitrary frequency in a sample buffer given a certain sample rate can be seen in Algorithm~\ref{alg:xqifft_error} on Line~\ref{alg:sinesynthline}. Here, \textit{phase offset} and \textit{last phase} are used to make sure the sine in continuous between frames.
 
-There is one small caveat with this algorithm in the polyphonic case. For instance, if we generate two overlapping sine waves of the same frequency, but one sine temporally shifted half a wavelength, the two waves will cancel each other out. If they are generated a full wavelength apart, they will amplify each other maximally and might cause clipping. Mixing multiple audio channels is out of the scope of this thesis, so we simply ignore this problem. In practice, these cases rarely show up.
+% \textcolor{gray}{TODO: Rewrite. }
+% Our sine synthesizer algorithm starts by zeroing the synth buffer. We first try to zero notes which were not zero at the end of the previous frame. Then, we iterate over every note event and add the generated sine wave samples corresponding to the note event to the synth buffer in the right place. We make sure both ends of the note event samples are at zero by temporally shifting the offset of the note. We only shift the offset, as the onset is more important for conveying rhythm. For every note event that could not reach zero at the end of the synth buffer, we save the note and the phase corresponding to the last generated sample. By saving the phase of the last sample of a note, we can continue at the correct position in the corresponding sine wave in the next frame. This algorithm will always ensure continuity, even if there is polyphony in the note events.
+
+% There is one small caveat with this algorithm in the polyphonic case. For instance, if we generate two overlapping sine waves of the same frequency, but one sine temporally shifted half a wavelength, the two waves will cancel each other out. If they are generated a full wavelength apart, they will amplify each other maximally and might cause clipping. Mixing multiple audio channels is out of the scope of this thesis, so we simply ignore this problem. In practice, these cases rarely show up.
 
 % As mentioned in Section~\ref{sec:fourier}, accurate estimation of signal power is difficult. Instead, we rely on relative signal power estimation. .
 
-Currently, we have implemented \textcolor{red}{TODO synths}. %For information about adding additional synths to Digistring, see Appendix~\ref{sec:add_to_digistring}.
+% Currently, we have implemented \textcolor{red}{TODO synths}. %For information about adding additional synths to Digistring, see Appendix~\ref{sec:add_to_digistring}.
 
 
 \subsection{Optimize XQIFFT exponent}  \label{sub:opt_xqfft}
@@ -645,18 +684,18 @@ As mentioned in the intro of this section, good experimentation and estimation f
 
 Experiments in AMT rely on datasets containing sound files accompanied with annotation files describing the notes present in the sound files. This means that in order to experiment on a pitch estimation system, we need to be able to feed the sound files to the pitch estimation system and compare its results to the annotations. The former is possible through the \texttt{audio\_in} sample getter. To allow for the latter, Digistring can write its estimations results to a JSON formatted file.
 
-To compare the Digistring results to annotations, we created a Python tool called \textit{generate report}. Given a Digistring output file and the corresponding dataset annotation, it can calculate many different performance measures. Furthermore, it can generate plots which visualize the annotations and pitch estimation results in a MIDI piano roll like fashion; see Figure~\ref{fig:pianoroll} for an example.
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{fig/generate_report.png}
-    \caption{\textcolor{gray}{TODO: Better image.} TODO: Caption.}
-    \label{fig:pianoroll}
-\end{figure}
+To compare the Digistring results to annotations, we created a Python tool called \textit{generate report}. Given a Digistring output file and the corresponding dataset annotation, it can calculate many different performance measures. Furthermore, it can generate plots which visualize the annotations and pitch estimation results in a MIDI piano roll like fashion; see Figure~\ref{fig:dat3} for an example.
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=\linewidth]{fig/generate_report.png}
+%     \caption{\textcolor{gray}{TODO: Better image.} TODO: Caption.}
+%     \label{fig:pianoroll}
+% \end{figure}
 Unfortunately, every dataset uses its own annotation standard. Because of this, we parse the annotation file into an intermediate representation. This allows us to use the tool for different datasets by solely implementing a parser for the annotation standard. Furthermore, the Digistring output is also parsed into this intermediate representation, which means this tool can also be used with different estimation systems by writing a parser for the estimation system's output. The different performance measures are then calculated from this intermediate representation.
 
-As we focus on real-time pitch estimation, we need to be able to measure the run-time performance of different parts of the system. This is possible through our performance measuring class, which allows us to set labelled measurement points in the code between which elapsed time is measured. The measured times are written to a file which can be interpreted by our \textit{performance plot} tool, which can visually show the distribution of run-times for each time point; see Figure~\ref{TODO} for an example of such a plot. Using this information, we can see which processes introduce the most latency to our pitch estimation system.
+As we focus on real-time pitch estimation, we need to be able to measure the run-time performance of different parts of the system. This is possible through our performance measuring class, which allows us to set labelled measurement points in the code between which elapsed time is measured. The measured times are written to a file which can be interpreted by our \textit{performance plot} tool, which can visually show the distribution of run-times for each time point; see Figure~\ref{fig:plotspeed} for an example of such a plot. Using this information, we can see which processes introduces the most latency to our pitch estimation system.
 
-In order to visualize the pitch estimation process, we allow Estimators to define an EstimatorGraphics object, which holds information regarding the last processed frame. This information can be rendered using visualizers. For instance, we can render the spectrum as a spectrogram or waterfall plot, or plot the raw input waveform; see Figure~\ref{fig:screens} for examples.
+In order to visualize the pitch estimation process, we allow Estimators to define an EstimatorGraphics object, which holds information regarding the last processed frame. This information can be rendered using visualizers. For instance, we can render the spectrum as a spectrogram or waterfall plot, or plot the raw input waveform; see Figure~\ref{fig:screens} for examples. The spectrogram visualizer can also render signal envelopes and found peaks, which allows us to precisely fine-tune parameters regarding these.
 \begin{figure}[h]
     \centering
     % \begin{subfigure}{\linewidth}
@@ -671,14 +710,13 @@ In order to visualize the pitch estimation process, we allow Estimators to defin
         \includegraphics[width=\linewidth]{fig/digi_wave.png}
     %     \caption{}
     % \end{subfigure}
-    \caption{TODO: Caption.}
+    \caption{Screenshots of different graphing modes of Digistring. The top image show the spectrogram plotter. Here, the spectrum is displayed in green, the Gaussian envelope in red and the selected peaks in blue. The middle image shows the waterfall plotter. These plots move downward through time and show the spectrum on the horizontal axis. Brighter colors equate to higher amplitudes. On the bottom is the signal plotter, which displays the raw time domain signal.}
     \label{fig:screens}
 \end{figure}
 
-\textcolor{gray}{Slowdown mode.}
+To better understand the estimation process during transients, we implemented a slowdown mode. This stretches the note events reported by the estimator, effectively slowing down the estimation process, which in turn can slow Digistring down. This allows us to better find filters which can suppress note estimations during transients.
 
-\textcolor{gray}{Synthesizer, especially combined with stereo split input monitoring/synthesizer output. MIDI output version of Digistring.}
-
+As mentioned in Section~\ref{sub:rtsynth}, synthesizers are an important tool in verifying the musical correctness of estimated note events. To better verify the synthesized result matched the input signal, we allow for the input signal and synthesized signal to be played back simultaneously with the input signal split over the two stereo channels. Furthermore, it is also possible for Digistring to output MIDI events, which allows Digistring to be used with existing MIDI synthesizers.
 
 % \subsection{Playback latency}  \label{sub:playback_latency}
 % \textcolor{gray}{Details on how we made the playback latency tool.}
@@ -688,39 +726,159 @@ In order to visualize the pitch estimation process, we allow Estimators to defin
 
 
 \section{Experiments}  \label{sec:exp}
-\textcolor{gray}{Note that the parameters were empirically optimized with informal experiments. Datasets. Actual experiments.}
+In order to assess the performance of our pitch estimation system, we perform a few experiments. First, we measure the error of the different QIFFT methods so we can choose the best method for our pitch estimation system. Then we will try to assess a lower limit on latency using Fourier based pitch estimation methods on a guitar to test if Fourier based methods can ever be feasible. Subsequently, we will run some speed tests on our pitch estimation algorithm to see if our real-time goal is met. Then, we will have an in depth discussion on actually using Digistring as a guitar synthesizer. Lastly, in order to obtain some quantitative measure on the over all pitch estimation performance, we run the Fraunhofer dataset~\cite{dataset} through Digistring.
+
+The different parameters which control the pitch estimation process were empirically optimized. There is still room from improvement through parameter tuning, however, as the accuracy and latency would only marginally improve, we opted to safe us the time. At best, we can save a few milliseconds and filter some noisy estimations from transients.
+
+We used the following parameters for all experiments, unless otherwise is stated. The frame size is 8192 samples with a sampling rate of 192000 Hz. This coincides with a frame time of 42.67 ms and a Fourier bin size of 23.44 Hz. We zero-pad the buffer 15 times, resulting in an actual frame size of 131072 samples, giving us a interpolated bin size of 1.46 Hz. The overlap factor is set to 0.85. The minimum signal power is set to 15 and the envelope threshold is set to 0.25. Gaussian peak-picking uses a sigma of 1.25 and a kernel width factor of 0.0005. The signal to noise factor is set to 0.05. The range filter matches the range of a guitar, which is between \note{E}{2} and \note{E}{6}.
 
 
 \subsection{QIFFT errors}  \label{sub:exp:qifft}
-\textcolor{gray}{Errors of the different interpolation methods.}
+To help choosing the best QIFFT strategy, we measured the performance of the different strategies using the method outlined in Section~\ref{sub:opt_xqfft}. The results are listed in Table~\ref{tab:qifft_error}. The bin size during these tests was approximately 1.465 Hz. The nearest bin method coincides with no interpolation. As a consequence, the worst error is half the bin size and the average error is half the worst error.
+
+We can see that LQIFFT significantly reduces the error compared to nearest bin and MQIFFT. Furthermore, all LQIFFT methods perform the same, invariant to logarithm base or linear scaling factor. Lastly, we can see that XQIFFT only situationally outperforms LQIFFT. Because of this, we opted not to use XQIFFT. Do note that the error reduction of XQIFFT compared to LQIFFT is significant if no zero-padding is used.
+\begin{table*}[h]
+    \centering
+    \begin{tabular}{c|ccc}
+        Method & mean squared error & mean error & max error \\
+        \hline
+        Nearest bin & 0.178952 & 0.366332 & 0.731592 \\
+        MQIFFT & 0.0493383 & 0.198229 & 0.318431 \\
+        LQIFFT with $\ln$ & 0.0200228 & 0.12687 & 0.242515 \\
+        LQIFFT with $\log_2$ & 0.0200228 & 0.12687 & 0.242515 \\
+        LQIFFT with $\log_{10}$ & 0.0200228 & 0.12687 & 0.242515 \\
+        dB-QIFFT ($20 * \log_{10}$) & 0.0200228 & 0.12687 & 0.242515 \\
+        XQIFFT ($\epsilon = -0.301939$) & 0.0173085 & 0.114302 & 0.41559 \\
+        XQIFFT ($\epsilon = -0.764585$) & 0.0233141 & 0.107375 & 0.603697 \\
+        XQIFFT ($\epsilon = 0.0554724$) & 0.0210592 & 0.129826 & 0.212814
+    \end{tabular}
+    \caption{Overview of interpolation errors in hertz using different interpolation methods. For the XQIFFT methods, we tested three values for $\epsilon$. The first minimizes mean squared error, the second minimizes mean error and the last minimizes max error.}
+    \label{tab:qifft_error}
+\end{table*}
 
 
 \subsection{Fourier frame size limit}
-\textcolor{gray}{TODO: Better section name. Lowest frame size we can discern two low pitched sines.}
+The limiting factor for low latency Fourier based pitch estimation is the size of the transformed frame. The size of the frame determines the lowest two notes we can discern. Therefore, given we need to be able to discern the \note{E}{2} and the \note{F}{2}, we can find the limit on minimum frame size our pitch estimation system needs.
+
+We start with discerning pure sine waves to get an estimate on the theoretical lower limit of our pitch estimation method. Here, we found that we can reliably discern \note{E}{2} and \note{F}{2} with a frame size of 1024 samples with 15 times zero-padding for a total frame size of 16384. This equates to a frame length of 5.33 ms.
+
+To get a more practical lower limit, we did the same test on recordings of \note{E}{2} and \note{F}{2} played on a guitar. Here, we found we need 5760 samples for consistent results, equating to a frame length of 30 ms. Note that even though we can reliably discern \note{E}{2} and \note{F}{2} at this frame size, the measured frequencies are dissonant. This means we can't use the obtained frequency information for note synthesis, only the note information, implying we can only synthesize tuned notes from the results.
+% Here, we found that at a frame size of 4096, the spectrum behaved to chaotically to find a consistent peak for any of the two notes. Moreover, the fundamental frequency and the first overtone often become one lobe. At a frame size of 8192, we can get very reliable results.
 
 
-\subsection{Pitch estimation speed}
-\textcolor{gray}{Graphs of pitch estimation speed distribution.}
+\subsection{Pitch estimation speed}  \label{sub:expspeed}
+As we are performing pitch estimation in real-time, the speed of the process is very important. Figure~\ref{fig:plotspeed} shows the distribution of execution speeds of the different parts of the pitch estimation process. Here, we can see that calculating the Gaussian envelope used for peak picking takes significantly longer than the rest of the pitch estimation process. For the other parts, the processing time is insignificant compared to the length of the frame.
+
+On average, it takes the HighRes estimator 3.1 ms to process a frame of 42.7 ms. This means our estimator runs 13.8 times real-time. In other words, our pitch estimation algorithm can process samples 13.8 faster than it acquires them. The total latency of our pitch estimation algorithm is 45.8 ms.
+\begin{figure*}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/perfplot.png}
+    \caption{Plots of distribution of run times for every HighRes estimator component.}
+    \label{fig:plotspeed}
+\end{figure*}
+
+
+\subsection{Informal testing}
+Unfortunately, it is almost impossible to capture the performance of our pitch estimation system quantitatively. Some errors might completely ruin the results, while others might not matter at all. Furthermore, certain guitar techniques do not work well in guitar driven synthesis. Because of this, we will try to discuss the performance of Digistring as a guitar synthesizer from a guitarists perspective.
+
+First should be noted that using a guitar synthesizer should be viewed as playing a different instrument similar to a guitar. It will be very familiar to a guitarist, but directly playing songs as one would normally play them will cause bad results. Most importantly, one should try to play as clean as possible. This means strumming the notes carefully to prevent string to overdrive and keep transients at a minimum. Furthermore, all unused strings should be thoroughly muted. Palm muting slightly reduces the power of transient, however, it also impact the sustain of played notes.
+
+The main problem for our pitch estimator is transients. This means techniques such as shredding and double picking do not work well. Moreover, pull-offs and hammer-ons work well, as they barely cause transients. The pitch estimator is very sensitive to small amplitude signals, which makes tapping much easier. Moreover it allows to play the guitar in a piano like fashion, where both hands tap notes on the fretboard, much easier.
+
+Our estimator support bending. However, this does require the synthesizer to be able to generate tones between notes, which is often not the case for piano synthesizers.
+
+Given the above information, we can conclude guitar solos generally work very well for our pitch estimation algorithm. They are very melodic and often carefully played. In contrast, metal performs very bad in our pitch estimator. Metal often conveys fast rhythms through guitar, which end up as a big mess of transients to our estimator. Furthermore, metal is often played on the lowest notes of a guitar, which are the most difficult for our estimator.
+
+Unfortunately, we were not able to remain within our real-time constraint of 20 milliseconds. The critical latency is however highly subjective. Some didn't even notice the latency until we brought it up, while others deemed it too high for real-time usage. We found that after playing for a while, you get used to the latency and found it not to be too problematic. The impact of the latency is also largely dependent on synthesizer used to generate the audio. When using a synthesizer with a slow attack, the swell effectively masks the latency.
+
+We recorded some examples of Digistring during live usage. Videos of this can be found on \url{github.com/lucmans/digistring-demo}. Here, we also provide the raw guitar input, which can be run through Digistring to generate the content from the videos yourself.
 
 
 \subsection{Pitch estimation accuracy}
-\textcolor{gray}{...}
+In order to obtain a quantitative measure on Digistring's performance, we run a subset of the Fraunhofer dataset~\cite{dataset} through Digistring. The Fraunhofer dataset contains both monophonic and polyphonic recordings. As our pitch estimation algorithm is monophonic, we will only use the monophonic recordings in the dataset. The dataset is split into four different subsets. Three of the subsets contain monophonic recordings. The dataset is recorded at a sample rate of 44100 Hz, so we have to change the frame size and Gaussian kernel width factor to 1882 and 0.002 respectively.
+
+Unfortunately, the recording quality of the dataset is not the best. Notes often distort slightly and are not always fretted cleanly. These mistakes cause problems for our estimator. As the dataset consists of raw guitar output, the recording artists were likely listening to the raw feedback. This often causes guitarists play too loud to compensate for not having any amplification, causing distortions and other effects from unnatural guitar play.
+% As discussed in the previous section, a guitar driven synthesizer should almost be considered a different instrument from a guitar. 
+
+The first subset consists of single note recordings. Each recording contains one note. There is a recording of the open string along with all fretted notes to the 12th fret for every string. There are four versions. Three use the same Ibanez guitar with different pick-up configurations (neck/bridge) and one uses a Fender guitar. For each version, we measured if the note was correctly identified, if at least 90\% of the annotated event was found and if we found one uninterrupted note event. The results are summarized in Table~\ref{tab:expacc}. Here, we can see all notes were correctly identified. Unfortunately, many notes are not identified as one continuous note event due to small distortions in the recordings.
+
+Interestingly, we can see significantly better results from the neck pick-up compared to the bridge pick-up on the Ibanez guitar. We could not replicate these results with any of our guitars, including an Ibanez guitar. We found no notable difference in pitch estimation accuracy between different pick-ups. The difference we found in the dataset is likely from the inconsistent playing quality between recordings.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{r|rrr}
+        version     & correct & $t_{>0.9}$ correct & no interrupt \\
+        \hline
+        Fender      & 100 \%  & 96 \%   & 81 \% \\
+        Ibanez N    & 100 \%  & 96 \%   & 76 \% \\
+        Ibanez B    & 100 \%  & 87 \%   & 51 \% \\
+        Ibanez N+B  & 100 \%  & 92 \%   & 67 \%
+    \end{tabular}
+    \caption{Results of the first subset of the Fraunhofer dataset.}
+    \label{tab:expacc}
+\end{table}
+
+The second subset consists of six licks played on three different guitars. Every lick is played with a plectrum and finger style. 
+Unfortunately, the licks are played quite sloppy, resulting in much guitar noise in the recordings. In turn, it causes many transient errors. The results are summarized in Table~\ref{tab:expacc2}. Here, we can see we did not miss any notes, however, due to the low quality of the dataset, we often do not find the full note. We can see a significant difference between finger style playing and playing with a pick. When we tried to replicate these results, we only found a small difference between the two playing styles. The large difference is likely because licks written to be played with a pick are often difficult to play finger style. We found that playing finger style may lead to smaller transients, but more inconsistent overtone behavior due to the dampening from soft finger skin.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{r|rr}
+        version          & correct & $t_{>0.8}$ correct \\
+        \hline
+        Fender pick      & 100 \%  & 83 \% \\
+        Fender finger    & 100 \%  & 58 \% \\
+        Gibson pick      & 100 \%  & 75 \% \\
+        Gibson finger    & 100 \%  & 58 \% \\
+        Aristides pick   & 100 \%  & 79 \% \\
+        Aristides finger & 100 \%  & 63 \%
+        % total            & 100 \%  & 69 \%
+    \end{tabular}
+    % \\\vspace{+2mm}~\\
+    % \begin{tabular}{r|rrr}
+    %     version          & P & R & F1 \\
+    %     \hline
+    %     Fender pick      &  &  &  \\
+    %     Fender finger    &  &  &  \\
+    %     Gibson pick      &  &  &  \\
+    %     Gibson finger    &  &  &  \\
+    %     Aristides pick   &  &  &  \\
+    %     Aristides finger &  &  &  \\
+    %     total            & 0.20 & 1.0 & 0.34
+    % \end{tabular}
+    \caption{Results of the second subset of the Fraunhofer dataset.}
+    \label{tab:expacc2}
+\end{table}
+
+The last subset consists of five small excerpts of famous classical pieces, of which only two are monophonic. The estimation overview is shown in Figure~\ref{fig:dat3}. Here, we can see all notes were correctly identified. In promenade, we can see the end of the first note is missing, however, this is a mistake in the annotations. Even though it is a monophonic recording, we can see the second note overlapping the first note in the annotations. Other than that, the only errors are transient errors. The transient errors are of small amplitude, so are barely audible when using them for note synthesis.
+\begin{figure*}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/dataset3.png}
+    \caption{Results of the third subset of the Fraunhofer dataset. The top and bottom image show the pitch estimation results for Pathetique and Promenade respectively.}
+    \label{fig:dat3}
+\end{figure*}
 
 
 
 \section{Conclusions}
-\textcolor{gray}{What we did in this thesis. Reflection on the performance of the system. Final reference to the source code.}
+In this thesis, we constructed a Fourier transform based real-time pitch estimation algorithm. We found the limiting factor of such systems is the fundamental trade-off between frame length and frequency resolution. In order to have enough frequency resolution to discern the two lowest notes on a guitar, the \note{E}{2} and \note{F}{2}, we would need a frame length of 200 milliseconds for an frequency resolution of 4.9 Hz. This exceeds our real-time constraint of 20 milliseconds by a significant amount. Through interpolation, we can reduce the frame length. We found we can reduce it to 43 milliseconds using zero-padding and LQIFFT, which equates to a frequency resolution of 23.44 Hz. When we only focus in note estimation in contrast to exact frequency estimation, we can further reduce the frame length to 30 milliseconds. Unfortunately, this is still over our real-time constraint. We could adhere to our our real-time constraint if choose a higher lowest note.
+
+To reduce the frame length, we looked at XQIFFT~\cite{interpolnozero}, as the paper shows an 100 to 1000 times reduction in interpolation error. However, we found our that this large error reduction is only possible when no zero-padding is used. With our level of zero-padding, XQIFFT only situationally outperforms LQIFFT.
+
+During performance analysis, we found that calculating the Gaussian envelope of the signal takes a significant amount of time. The main advantages of Gaussian peak picking are related to polyphonic transcription. As such, we should look to replace the peak picking strategy for a faster one. However, this can only improve our latency by 2.5 milliseconds at best, which isn't enough difference to achieve our real-time goal.
+
+Through informal testing, we found our pitch estimator has can reliably estimate the correct pitch if a note persists for long enough. However, during the transient of a note, we still produce many random estimations. We could better filter these estimations, however, we found that a prolonged silence at the onset played worse than having the wrong transient estimations. Furthermore, the estimations from transients are often of low amplitude, causing synthesized audio to only softly play the transient errors. Even though our estimator exceeds our real-time constraint, it is still fast enough to play with. It should be noted that the critical latency is highly subjective and as such, some people who tried Digistring did not notice the latency, while others found it a deal-breaker. When using synthesizers with a slow attack, the latency and transient errors are no problem at all, as by the time the synthesized audio is in full volume, the note estimation has already stabilized.
 
 
 
 \section{Future work}  \label{sec:future}
-\textcolor{gray}{What could still be improved/further researched.}
+There is still much to improve on the HighRes estimator. However, the current estimation strategy likely cannot ever function within our real-time constraint for the full range of a guitar due to fundamental limits of the Fourier transform.
 
-\textcolor{gray}{Overtone dissonance.}
+Our pitch estimation algorithm discard the phase information provided by the Fourier transform. However, we can use the phase estimation to refine the frequency estimation~\cite{phaseinfo}. If we know the phase of a specific frequency and the hop size between two frames, we can extrapolate what the phase should be in the next frame. The error of this estimate compared to the measured phase of the next frame can be used to refine the frequency estimation.
 
+While analyzing the raw guitar signal, we found that the waveform consists of "packets", see Figure~\ref{fig:osc_overview} for an example. These packets form, among other things, because of the fundamental frequency which suppresses the waveform close to its zero-crossing. Autocorrelation pitch estimation methods work well because these packets look alike. However, the first packet which occurs during the transient differs. As a consequence, autocorrelation might slightly misjudge the distance between the first two packets and estimate the wrong note.
 
-\subsection{Waveform packets}  \label{sub:waveform_packet}
-\textcolor{gray}{Low frequency tones from a guitar come in "packets". By detecting the distance between two packets, we can estimate the frequency.}
+For future research, we would look into accurately calculating the distance between the first two packets. The time between these packets is equal to the inverse of the frequency. When analyzing the signal from an \note{E}{2} in an oscilloscope, we found the second packet finished 15 milliseconds after onset. This gives us 5 milliseconds of headroom for pitch estimation to remain within our real-time constraint. Packet based methods are likely less stable than Fourier based methods, as small errors in packet distance measurements will quickly cause an entirely different note to be estimated. We would suggest combining both methods by using packet based methods for fast estimations and Fourier based methods for slow stable estimations.
+
+% TODO: Note tracking.
 
 
 
@@ -778,20 +936,20 @@ Lastly, we checked the pitch estimation latency when feeding the Axon pure sine 
 
 
 
-\section{Effect of different window functions}  \label{sec:windows}
-\textcolor{gray}{Plots met effect van verschillende window functions. Rectangular narrowest main lobe and least ENBW. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage (optimal filter). Parzen window (and b-spline windows per extension) have much space between lobes (lobe density).}
+% \section{Effect of different window functions}  \label{sec:windows}
+% \textcolor{gray}{Plots met effect van verschillende window functions. Rectangular narrowest main lobe and least ENBW. The Hann window is an all round performing window and as a result is often used. The Welch window is a window with a very narrow center lobe. The Dolph–Chebyshev window has little and very evenly spread overall leakage (optimal filter). Parzen window (and b-spline windows per extension) have much space between lobes (lobe density).}
 % for ENBW of different windows: https://www.gaussianwaves.com/2020/09/equivalent-noise-bandwidth-enbw-of-window-functions/
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{fig/windows.png}
-    % \includegraphics[width=\linewidth]{fig/window_rect.png}
-    % \includegraphics[width=\linewidth]{fig/window_hann.png}
-    % \includegraphics[width=\linewidth]{fig/window_welch.png}
-    % \includegraphics[width=\linewidth]{fig/window_dolph.png}
-    \caption{Examples of the spectral leakage of some window functions.}
-    \label{fig:windowfunceffect}
-\end{figure}
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=\linewidth]{fig/windows.png}
+%     % \includegraphics[width=\linewidth]{fig/window_rect.png}
+%     % \includegraphics[width=\linewidth]{fig/window_hann.png}
+%     % \includegraphics[width=\linewidth]{fig/window_welch.png}
+%     % \includegraphics[width=\linewidth]{fig/window_dolph.png}
+%     \caption{Examples of the spectral leakage of some window functions.}
+%     \label{fig:windowfunceffect}
+% \end{figure}
 
 
 
@@ -814,8 +972,11 @@ Lastly, we checked the pitch estimation latency when feeding the Axon pure sine 
 
 
 \addcontentsline{toc}{section}{Bibliography}
+% \printbibliography
 \bibliographystyle{plain}
-% \bibliographystyle{alpha}
+% % \bibliographystyle{agsm}
+% % \bibliographystyle{IEEEtran}
+% % \bibliographystyle{alpha}
 \bibliography{thesis}
 
 \end{document}

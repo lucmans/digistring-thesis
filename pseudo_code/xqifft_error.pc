@@ -45,10 +45,10 @@
     \ForEach{$f \in$ \freqs} {
         \lastphase $\leftarrow$ 0.0\;
         \For{$r\leftarrow 0$ \KwTo \repsfreq} {
-            \tcp{Generate sine wave}
+            \tcp{Generate sine wave}  \label{alg:sinesynthline}
             \phaseoffset $\leftarrow$ \lastphase $*$ (\samplerate $/$ $f$)\;
             \For{$i\leftarrow 0$ \KwTo $|\insine|$} {
-                \insine{$i$} $\leftarrow$ $\sin{(2.0 * \pi * (i + \phaseoffset) * f) / \samplerate}$\;
+                \insine{$i$} $\leftarrow$ $\sin{(2.0 * \pi * (i + \phaseoffset) * f / \samplerate)}$\;
             }
             \lastphase $\leftarrow$ \lastphase $+$ ($f$ $/$ (\samplerate $/$ $|\insine|$)) $\bmod$ 1.0\;
             \BlankLine
@@ -66,6 +66,6 @@
 
 
     \BlankLine
-    \caption{Calculates the mean squared error of XQIFFT given exponent $\epsilon$ and a pitch estimation algorithm}
+    \caption{Calculates the mean squared error of XQIFFT given exponent $\epsilon$ and a pitch estimation algorithm.}
     \label{alg:xqifft_error}
 \end{algorithm*}%\DecMargin{0.5em}

@@ -66,6 +66,6 @@
     \Return \exps{\minidx}\;
 
     \BlankLine
-    \caption{Iterative algorithm approximating optimal choice of $\epsilon$ to be used by XQIFFT}
+    \caption{Iterative algorithm approximating optimal choice of $\epsilon$ to be used by XQIFFT.}
     \label{alg:optimize_xqifft}
 \end{algorithm*}%\DecMargin{0.5em}

@@ -9,6 +9,7 @@
     \SetKwData{peaks}{peaks}
     \SetKwData{ipeaks}{interpolated\_peaks}
     \SetKwData{notes}{notes}
+    \SetKwData{filtered}{filtered}
 
     \SetKwFunction{applywindow}{apply\_window\_function}
     \SetKwFunction{zeropad}{zero\_pad}
@@ -17,6 +18,7 @@
     \SetKwFunction{pickpeaks}{pick\_peaks}
     \SetKwFunction{interpeaks}{interpolate\_peaks}
     \SetKwFunction{picknotes}{determine\_notes}
+    \SetKwFunction{filternotes}{filter\_notes}
 
     \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
     \SetKwComment{Comment}{ // }{}
@@ -25,13 +27,16 @@
     \Output{Set of notes contained in the the frame}
     \BlankLine
 
+    \tcp{Note that \frame is zero-padded}
     \windowed $\leftarrow$ \applywindow{\frame}\;
-    \zeropadded $\leftarrow$ \zeropad{\windowed}\;
+    % \zeropadded $\leftarrow$ \zeropad{\windowed}\;
     \freqdomain $\leftarrow$ \applyfourier{\windowed}\;
     \spectrum $\leftarrow$ \calcnorms{\freqdomain}\;
     \peaks $\leftarrow$ \pickpeaks{\spectrum}\;
     \ipeaks $\leftarrow$ \interpeaks{\peaks}\;
     \notes $\leftarrow$ \picknotes{\ipeaks}\;
+    % \filtered $\leftarrow$ \filternotes{\notes}\;
+
     \BlankLine
 
     \Return \notes\;
