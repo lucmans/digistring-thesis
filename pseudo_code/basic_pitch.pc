@@ -1,5 +1,6 @@
-\IncMargin{0.5em}
-\begin{algorithm*}
+%\DecMargin{0.5em}
+\begin{algorithm}[b!]
+    \nonl\TitleOfAlgo{Basic pitch estimation algorithm}
     \SetKwData{samplerate}{$f_\text{SR}$}
     \SetKwArray{spectrum}{$S$}
     \SetKwData{samples}{$F$}
@@ -40,6 +41,7 @@
     \Return $\round{12 * {}^{2}\!\log{\frac{\estimatedfreq}{440}}} + 69$\;
 
     \BlankLine
+    \BlankLine
     \caption{Basic Fourier based pitch estimation algorithm. Note that this algorithm assumes arrays to start at 0. The for-loop on line~\ref{alg:basic_pitch:for} loops from 2, as the first bin (index 0) corresponds to the DC offset and is not relevant. Then, we set the current found max to the second bin (index 1) and check if any subsequent bin is higher. We loop till $\floor{\frac{|F|}{2} + 1}$, as the second half of the Fourier transform is symmetric due to the purely real input data and can be discarded.}
     \label{alg:basic_pitch}
-\end{algorithm*}\DecMargin{0.5em}
+\end{algorithm}%\IncMargin{0.5em}

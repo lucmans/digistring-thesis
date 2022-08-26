@@ -18,9 +18,9 @@ noimage:
 
 
 # Only build thesis
+# 	bibtex thesis
 thesis.pdf: thesis.tex thesis.bib
 	pdflatex "\\def\\noimage{}\\input{thesis.tex}"
-	bibtex thesis
 	pdflatex  "\\def\\noimage{}\\input{thesis.tex}"
 	pdflatex thesis.tex
 

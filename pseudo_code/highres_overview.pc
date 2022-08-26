@@ -1,5 +1,6 @@
-%\IncMargin{12em}
-\begin{algorithm*}
+\DecMargin{1em}
+\begin{algorithm}[b!]
+    \nonl\TitleOfAlgo{HighRes estimator}
     \SetKwData{frame}{frame}
     \SetKwData{samplerate}{sample\_rate}
     \SetKwData{windowed}{windowed}
@@ -28,6 +29,7 @@
     \BlankLine
 
     \tcp{Note that \frame is zero-padded}
+    \tcp{Only apply the window function to non-zero-padded samples}
     \windowed $\leftarrow$ \applywindow{\frame}\;
     % \zeropadded $\leftarrow$ \zeropad{\windowed}\;
     \freqdomain $\leftarrow$ \applyfourier{\windowed}\;
@@ -42,6 +44,7 @@
     \Return \notes\;
 
     \BlankLine
-    \caption{Overview of a high resolution estimator.\\Here, the input frame is overlapped with the previous frame.}
+    \BlankLine
+    \caption{Overview of the HighRes estimator. Here, the input frame is overlapped with the previous frame.}
     \label{alg:highres_overview}
-\end{algorithm*}%\DecMargin{12em}
+\end{algorithm}\IncMargin{1em}

@@ -1,5 +1,6 @@
 % \IncMargin{0.5em}
-\begin{algorithm*}
+\begin{algorithm*}[p]
+    \nonl\TitleOfAlgo{Most likely note selector}
     \SetKwArray{ipeaks}{i\_peaks}
     \SetKwArray{nharmonics}{n\_harmonics}
     \SetKwArray{overpower}{overtone\_power}
@@ -19,7 +20,7 @@
     \SetKwComment{Comment}{ // }{}
 
     \Input{Interpolated peaks \ipeaks and overtone error threshold \overtoneerror}
-    \Output{Likeliest note}
+    \Output{Peak belonging to estimated fundamental frequency}
     \BlankLine
 
     \uIf{$|\ipeaks| = 0$} {
@@ -62,6 +63,7 @@
 
     Return \ipeaks{\maxidx}\;
 
+    \BlankLine
     \BlankLine
     \caption{Note selection algorithm which selects the peak with the most overtones.}
     \label{alg:noteselect}
