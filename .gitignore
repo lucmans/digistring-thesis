@@ -15,5 +15,6 @@
 # Intermediate output
 /no_title.pdf
 
-# Old figure
-/fig_old
+# Presentation related
+/presentation/*.nav
+/presentation/*.snm
