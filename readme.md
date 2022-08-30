@@ -1,3 +1,1 @@
-The thesis (`thesis.pdf`) for which digistring was developed.
-
-Note that the figure/table placement is as close to the reference as possible. This will change in the future.
+The thesis (`frontpaged.pdf`) for which [Digistring](https://github.com/lucmans/digistring) was developed and the final defense presentation (in presentation directory).
